@@ -1,10 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
+import { ChevronDown } from 'lucide-react';
 import { questions } from '../data/flow';
 import { buildPlan } from '../data/carePlan';
 import QuestionItem from '../components/QuestionItem';
 import CarePlanCard from '../components/CarePlanCard';
 import ChatInput from '../components/ChatInput';
+import Button from '../components/Button';
+
+// Height of the answered list once everything is done: two full rows and a hint
+// of the third, so it is obvious the list continues under the fade.
+const COLLAPSED_HEIGHT = 140;
 
 const REPLIES = {
   locked: [
@@ -44,12 +50,18 @@ export default function Chat({ user, plan, onPlan, unlocked, onOpenPlan, onSelec
   const [planReady, setPlanReady] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [chatLog, setChatLog] = useState([]);
+  const [answersExpanded, setAnswersExpanded] = useState(false);
   const scrollRef = useRef(null);
   const replyIndex = useRef(0);
 
   const allAnswered = questions.every((q) => answers[q.id]);
   const firstUnanswered = questions.findIndex((q) => !answers[q.id]);
   const activeIndex = editing != null ? editing : firstUnanswered === -1 ? null : firstUnanswered;
+
+  // Once every question is answered the list folds down to a summary. Editing a
+  // card opens it back up, so the active card is never hidden under the fade.
+  const collapsible = allAnswered && activeIndex === null;
+  const truncated = collapsible && !answersExpanded;
 
   const commit = (questionId, answer) => {
     setAnswers((a) => ({ ...a, [questionId]: answer }));
@@ -120,18 +132,58 @@ export default function Chat({ user, plan, onPlan, unlocked, onOpenPlan, onSelec
                 and the rest stay listed so the remaining effort is always visible */}
             <LayoutGroup>
               <motion.div layout className="workflow-card" style={{ borderRadius: 32 }}>
-                {questions.map((q, i) => (
-                  <QuestionItem
-                    key={q.id}
-                    question={q}
-                    number={i + 1}
-                    state={i === activeIndex ? 'active' : answers[q.id] ? 'collapsed' : 'upcoming'}
-                    isActive={i === activeIndex}
-                    answer={answers[q.id]}
-                    onCommit={(a) => commit(q.id, a)}
-                    onEdit={() => setEditing(i)}
-                  />
-                ))}
+                <div className="answers-wrap">
+                  <motion.div
+                    className="answers"
+                    animate={collapsible ? { height: truncated ? COLLAPSED_HEIGHT : 'auto' } : {}}
+                    transition={{ type: 'spring', stiffness: 260, damping: 32 }}
+                  >
+                    {questions.map((q, i) => (
+                      <QuestionItem
+                        key={q.id}
+                        question={q}
+                        number={i + 1}
+                        state={
+                          i === activeIndex ? 'active' : answers[q.id] ? 'collapsed' : 'upcoming'
+                        }
+                        isActive={i === activeIndex}
+                        answer={answers[q.id]}
+                        onCommit={(a) => commit(q.id, a)}
+                        onEdit={() => setEditing(i)}
+                      />
+                    ))}
+                  </motion.div>
+
+                  <AnimatePresence>
+                    {truncated && (
+                      <motion.div
+                        key="fade"
+                        className="answers-fade"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                      />
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {collapsible && (
+                  <div className="answers-toggle">
+                    <Button
+                      variant="secondary"
+                      onClick={() => setAnswersExpanded((v) => !v)}
+                      aria-expanded={answersExpanded}
+                    >
+                      {answersExpanded ? 'Hide answers' : 'See all answers'}
+                      <ChevronDown
+                        size={14}
+                        strokeWidth={1.75}
+                        className={`toggle-chevron${answersExpanded ? ' is-up' : ''}`}
+                      />
+                    </Button>
+                  </div>
+                )}
               </motion.div>
             </LayoutGroup>
           </motion.div>

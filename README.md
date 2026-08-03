@@ -21,7 +21,8 @@ the composer at the bottom is the only persistent control.
 2. **Chat** — the assistant opens with a couple of plain messages, then **one section**
    holding all 13 questions
    - Exactly one question is active; answered ones collapse into an overview row with answer chips and a pencil edit button; the rest stay listed as pending, so how much is left is always visible
-   - Clicking a collapsed row re-opens it for editing, at any point
+   - Once every question is answered the list folds down to ~two rows under a gradient with a **See all answers** toggle, so the finished questionnaire stops dominating the thread
+   - Clicking a collapsed row re-opens it for editing at any point, and opens the folded list so the active card is never hidden under the fade
    - Question types: multi-input (Next button), single select (auto-advance), multi select (Next button)
    - No Continue button and no step titles — the assistant's prompts are chat messages, the composer is the only persistent control
    - The composer is disabled until the questions are done, then accepts free-text messages
