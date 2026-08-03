@@ -1,0 +1,105 @@
+/* Design tokens — mirrored from Figma.
+   Layer 1: primitives from "NANA Prime - Tailwind config" file.
+   Layer 2: semantic aliases as used in the "Nana Prime" onboarding file. */
+:root {
+  /* ---- primitives: color/primary scale ---- */
+  --color-primary-50: #fff8f5;
+  --color-primary-100: #fff1ec;
+  --color-primary-200: #fedbce;
+  --color-primary-300: #fec6b1;
+  --color-primary-400: #fd9b77;
+  --color-primary-500: #fc703c;
+  --color-primary-600: #e36536;
+  --color-primary-700: #974324;
+  --color-primary-800: #71321b;
+  --color-primary-900: #4c2212;
+  --color-primary-950: #331408;
+
+  /* ---- primitives: color/neutral scale ---- */
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e5e5e5;
+  --color-neutral-300: #d4d4d4;
+  --color-neutral-400: #a1a1a1;
+  --color-neutral-500: #737373;
+  --color-neutral-600: #525252;
+  --color-neutral-700: #3e3e3e;
+  --color-neutral-800: #2a2a2a;
+  --color-neutral-900: #181818;
+
+  --color-white: #ffffff;
+
+  /* ---- semantic: primary ---- */
+  --primary: var(--color-primary-500);
+  --primary-foreground: var(--color-white);
+  --primary-highlight: var(--color-primary-600);
+  --primary-subtle: var(--color-primary-50);
+  --primary-subtle-highlight: var(--color-primary-100);
+  --primary-subtle-foreground: var(--color-primary-600);
+
+  /* ---- semantic: text ---- */
+  --text-primary: var(--color-neutral-700);
+  --text-secondary: var(--color-neutral-500);
+  --text-disabled: var(--color-neutral-400);
+
+  /* ---- semantic: surface ---- */
+  --surface-0: var(--color-white);
+  --surface-2: var(--color-neutral-100);
+  --surface-elevated: var(--color-white);
+  --surface-elevated-2: var(--color-white);
+  --surface-elevated-3: var(--color-neutral-100);
+  --surface-elevated-4: var(--color-neutral-200);
+  --surface-transparent: rgba(255, 255, 255, 0.35);
+
+  --border-subtle: var(--color-neutral-200);
+
+  /* ---- spacing (Tailwind scale) ---- */
+  --spacing-0-5: 2px;
+  --spacing-1: 4px;
+  --spacing-1-5: 6px;
+  --spacing-2: 8px;
+  --spacing-2-5: 10px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-6: 24px;
+  --spacing-7: 28px;
+  --spacing-8: 32px;
+
+  /* ---- radius ---- */
+  --radius-lg: 8px;
+  --radius-2xl: 16px;
+  --radius-3xl: 24px;
+  --radius-4xl: 32px;
+
+  /* ---- typography ---- */
+  --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --text-xs-size: 12px;
+  --text-xs-leading: 16px;
+  --text-sm-size: 14px;
+  --text-sm-leading: 20px;
+  --text-base-size: 16px;
+  --text-base-leading: 24px;
+  --font-normal: 400;
+  --font-medium: 500;
+
+  /* ---- component sizes ---- */
+  --button-size: 32px;
+  --chip-size: 28px;
+  --chip-radius: 8px;
+  --chip-px: 8px;
+  --input-size: 36px;
+
+  /* ---- effects ---- */
+  --shadow-card: 0px 1px 1.5px rgba(0, 0, 0, 0.1), 0px 1px 1px rgba(0, 0, 0, 0.06);
+  --shadow-container: 0px 1px 3px rgba(0, 0, 0, 0.1), 0px 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-button:
+    0px 8px 2px rgba(0, 0, 0, 0),
+    0px 5px 2px rgba(0, 0, 0, 0.01),
+    0px 3px 2px rgba(0, 0, 0, 0.05),
+    0px 1px 1px rgba(0, 0, 0, 0.09),
+    0px 0px 1px rgba(0, 0, 0, 0.1);
+
+  /* ---- gradients ---- */
+  --gradient-primary: linear-gradient(178deg, var(--primary-highlight) 14.7%, var(--primary) 85.3%);
+  --gradient-secondary: linear-gradient(164deg, var(--surface-elevated-3) 16.3%, var(--surface-transparent) 84.2%);
+}
