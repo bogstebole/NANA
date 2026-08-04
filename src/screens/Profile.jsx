@@ -1,6 +1,7 @@
 import { Pencil } from 'lucide-react';
 import { questionById } from '../data/flow';
 import Button from '../components/Button';
+import AskAssistant from '../components/AskAssistant';
 
 // Reads straight from the questionnaire answers, so the profile is whatever the
 // user told the assistant — no second source of truth.
@@ -34,7 +35,7 @@ function Section({ title, rows, onEdit }) {
   );
 }
 
-export default function Profile({ user, answers, onGoToChat }) {
+export default function Profile({ user, answers, onGoToChat, onAskAssistant }) {
   const elderly = fieldsOf('basic-info', answers);
   const contact = fieldsOf('primary-contact', answers);
   const doctor = fieldsOf('doctor-info', answers);
@@ -42,8 +43,11 @@ export default function Profile({ user, answers, onGoToChat }) {
   return (
     <div className="view">
       <div className="view-head">
-        <h1 className="view-title">Profile</h1>
-        <p className="view-sub">Everything you’ve shared, in one place.</p>
+        <div className="view-head-text">
+          <h1 className="view-title">Profile</h1>
+          <p className="view-sub">Everything you’ve shared, in one place.</p>
+        </div>
+        <AskAssistant onClick={onAskAssistant} />
       </div>
 
       <Section

@@ -1,4 +1,5 @@
 import {
+  ChevronDown,
   FileText,
   LayoutDashboard,
   MessageSquare,
@@ -7,6 +8,7 @@ import {
   Settings,
   User,
 } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import Logo from './Logo';
 
 const FOOTER_ITEMS = [
@@ -21,8 +23,11 @@ export default function AppNav({
   badge,
   threads,
   activeThread,
+  liveTitle,
   onSelectThread,
   onNewChat,
+  chatListOpen,
+  onToggleChatList,
   onRestart,
 }) {
   const initials =
@@ -55,8 +60,8 @@ export default function AppNav({
       </div>
 
       <div className="nav-group">
-        {/* the new-chat action sits on the row itself, so it is reachable without
-            opening the thread list first */}
+        {/* the chevron folds the thread list away, and new-chat sits on the row
+            itself so neither needs the list open first */}
         <div className={`nav-item has-action${view === 'chat' ? ' is-active' : ''}`}>
           <button
             type="button"
@@ -70,6 +75,19 @@ export default function AppNav({
           <button
             type="button"
             className="nav-inline-btn"
+            onClick={onToggleChatList}
+            aria-label={chatListOpen ? 'Collapse chats' : 'Expand chats'}
+            aria-expanded={chatListOpen}
+          >
+            <ChevronDown
+              size={15}
+              strokeWidth={2}
+              className={`toggle-chevron${chatListOpen ? '' : ' is-up'}`}
+            />
+          </button>
+          <button
+            type="button"
+            className="nav-inline-btn"
             onClick={onNewChat}
             aria-label="New chat"
             title="New chat"
@@ -78,29 +96,40 @@ export default function AppNav({
           </button>
         </div>
 
-        {/* the thread list only unfolds while the chat is the current view */}
-        {view === 'chat' && (
-          <div className="nav-sub">
-            <button
-              type="button"
-              className={`nav-sub-item${activeThread === 'live' ? ' is-active' : ''}`}
-              onClick={() => onSelectThread('live')}
+        <AnimatePresence initial={false}>
+          {chatListOpen && (
+            <motion.div
+              key="threads"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
+              style={{ overflow: 'hidden' }}
             >
-              <span className="nav-sub-label">Current chat</span>
-            </button>
-            {threads.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                className={`nav-sub-item${activeThread === t.id ? ' is-active' : ''}`}
-                onClick={() => onSelectThread(t.id)}
-              >
-                <span className="nav-sub-label">{t.title}</span>
-                <span className="nav-sub-date">{t.date}</span>
-              </button>
-            ))}
-          </div>
-        )}
+              <div className="nav-sub">
+                <button
+                  type="button"
+                  className={`nav-sub-item${activeThread === 'live' ? ' is-active' : ''}`}
+                  onClick={() => onSelectThread('live')}
+                >
+                  <span className="nav-sub-label">{liveTitle}</span>
+                  <span className="nav-sub-date">Current</span>
+                </button>
+                {threads.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className={`nav-sub-item${activeThread === t.id ? ' is-active' : ''}`}
+                    onClick={() => onSelectThread(t.id)}
+                  >
+                    <span className="nav-sub-label">{t.title}</span>
+                    <span className="nav-sub-date">{t.date}</span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {item({ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard })}
         {item({ id: 'plans', label: 'Care plans', icon: FileText })}

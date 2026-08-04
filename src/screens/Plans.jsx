@@ -1,7 +1,8 @@
-import { ArrowUpRight, FileText } from 'lucide-react';
+import { ArrowUpRight, FileText, Sparkles } from 'lucide-react';
 import { archivedPlans } from '../data/bookings';
 import { caregivers } from '../data/carePlan';
 import Button from '../components/Button';
+import AskAssistant from '../components/AskAssistant';
 
 const today = new Date().toLocaleDateString('en-GB', {
   day: 'numeric',
@@ -9,7 +10,7 @@ const today = new Date().toLocaleDateString('en-GB', {
   year: 'numeric',
 });
 
-export default function Plans({ plan, onOpenPlan, onGoToChat }) {
+export default function Plans({ plan, onOpenPlan, onGoToChat, onAskAssistant }) {
   const live = plan
     ? {
         id: 'live',
@@ -26,8 +27,11 @@ export default function Plans({ plan, onOpenPlan, onGoToChat }) {
   return (
     <div className="view">
       <div className="view-head">
-        <h1 className="view-title">Care plans</h1>
-        <p className="view-sub">Every plan we’ve put together, newest first.</p>
+        <div className="view-head-text">
+          <h1 className="view-title">Care plans</h1>
+          <p className="view-sub">Every plan we’ve put together, newest first.</p>
+        </div>
+        <AskAssistant onClick={onAskAssistant} />
       </div>
 
       {!plan && (
@@ -51,6 +55,16 @@ export default function Plans({ plan, onOpenPlan, onGoToChat }) {
             <div className="cg-main">
               <div className="cg-top">
                 <span className="cg-name">Care plan for {p.name}</span>
+                {/* the assistant opens against this plan, right where its title is */}
+                <button
+                  type="button"
+                  className="inline-ask"
+                  onClick={onAskAssistant}
+                  aria-label={`Ask the assistant about the ${p.date} plan`}
+                >
+                  <Sparkles size={12} strokeWidth={2} />
+                  Ask
+                </button>
                 <span className={`status-pill is-${p.status === 'Active' ? 'accepted' : 'muted'}`}>
                   {p.status}
                 </span>

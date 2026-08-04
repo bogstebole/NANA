@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Check } from 'lucide-react';
 import Button from '../components/Button';
+import AskAssistant from '../components/AskAssistant';
 
 function Toggle({ label, hint, on, onChange }) {
   return (
@@ -22,7 +23,7 @@ function Toggle({ label, hint, on, onChange }) {
   );
 }
 
-export default function Settings({ unlocked }) {
+export default function Settings({ unlocked, onAskAssistant }) {
   const [prefs, setPrefs] = useState({
     replies: true,
     schedule: true,
@@ -34,8 +35,11 @@ export default function Settings({ unlocked }) {
   return (
     <div className="view">
       <div className="view-head">
-        <h1 className="view-title">Settings</h1>
-        <p className="view-sub">Notifications, subscription and account.</p>
+        <div className="view-head-text">
+          <h1 className="view-title">Settings</h1>
+          <p className="view-sub">Notifications, subscription and account.</p>
+        </div>
+        <AskAssistant onClick={onAskAssistant} />
       </div>
 
       <div className="panel-card">

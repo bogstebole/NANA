@@ -33,6 +33,9 @@ input {
 
 /* ---------- App shell ---------- */
 
+/* Nav + content + panel need roughly 1250px to sit side by side. Below that the
+   content column gets cramped — overlaying the panel instead only trades that for
+   hidden buttons, so it stays a push until the shell is reworked for narrow screens. */
 .app {
   height: 100%;
   padding: 12px;
@@ -53,18 +56,36 @@ input {
   overflow: hidden;
 }
 
-.chat-header {
-  position: relative;
+/* ---------- Chat top bar ---------- */
+
+.chat-topbar {
   flex-shrink: 0;
-  height: 48px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3) var(--spacing-4) var(--spacing-3) var(--spacing-6);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
-.header-restart {
-  position: absolute;
-  right: 16px;
+.chat-topbar-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-topbar-title {
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-leading);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-topbar-sub {
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--text-disabled);
 }
 
 .chat {
@@ -1016,8 +1037,53 @@ input {
   border-bottom: 1px solid var(--border-subtle);
 }
 
+.sidebar-head-text {
+  flex: 1;
+  min-width: 0;
+}
+
 .sidebar-head .ci-btn {
   margin-left: auto;
+}
+
+/* ---------- Assistant panel ---------- */
+
+.copilot-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.copilot-suggestions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.suggestion {
+  max-width: 100%;
+  padding: 7px var(--spacing-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: var(--surface-0);
+  font-size: var(--text-xs-size);
+  line-height: var(--text-xs-leading);
+  color: var(--text-primary);
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.suggestion:hover {
+  border-color: var(--primary);
+  background: var(--primary-subtle);
+  color: var(--primary-highlight);
+}
+
+.copilot-footer {
+  flex-shrink: 0;
+  padding: var(--spacing-3) var(--spacing-4) var(--spacing-4);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .sidebar-body {
@@ -1286,7 +1352,34 @@ input {
 }
 
 .view-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
   margin-bottom: var(--spacing-2);
+}
+
+.view-head-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.inline-ask {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--primary-subtle-highlight);
+  color: var(--primary-highlight);
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: var(--font-medium);
+  transition: background 0.15s ease;
+}
+
+.inline-ask:hover {
+  background: var(--primary-subtle);
 }
 
 .view-title {

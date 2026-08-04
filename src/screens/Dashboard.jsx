@@ -1,6 +1,7 @@
 import { CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { STATUS_LABEL, bookingsWithCaregiver, statusCounts } from '../data/bookings';
 import Button from '../components/Button';
+import AskAssistant from '../components/AskAssistant';
 
 const STATUS_ICON = { accepted: CheckCircle2, pending: Clock, declined: XCircle };
 
@@ -14,15 +15,18 @@ function StatusPill({ status }) {
   );
 }
 
-export default function Dashboard({ hasBookings, onGoToChat }) {
+export default function Dashboard({ hasBookings, onGoToChat, onAskAssistant }) {
   const counts = statusCounts();
   const rows = bookingsWithCaregiver();
 
   return (
     <div className="view">
       <div className="view-head">
-        <h1 className="view-title">Dashboard</h1>
-        <p className="view-sub">Where every caregiver request stands right now.</p>
+        <div className="view-head-text">
+          <h1 className="view-title">Dashboard</h1>
+          <p className="view-sub">Where every caregiver request stands right now.</p>
+        </div>
+        <AskAssistant onClick={onAskAssistant} />
       </div>
 
       {!hasBookings ? (

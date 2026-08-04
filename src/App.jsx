@@ -8,7 +8,9 @@ import Plans from './screens/Plans';
 import Profile from './screens/Profile';
 import Settings from './screens/Settings';
 import AppNav from './components/AppNav';
+import ChatTopBar from './components/ChatTopBar';
 import CaregiverSidebar from './components/CaregiverSidebar';
+import CopilotPanel from './components/CopilotPanel';
 import PaywallModal from './components/PaywallModal';
 import { statusCounts } from './data/bookings';
 import { caregivers } from './data/carePlan';
@@ -25,12 +27,14 @@ export default function App() {
   const [answers, setAnswers] = useState({});
   const [plan, setPlan] = useState(null);
   const [unlocked, setUnlocked] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // one slot on the right: the care plan or the assistant, never both
+  const [rightPanel, setRightPanel] = useState(null); // null | 'plan' | 'copilot'
   // null when closed, otherwise { caregiver } — a caregiver means the user tapped one
   // to request their number, no caregiver means they unlocked the recommendations.
   const [paywall, setPaywall] = useState(null);
   const [threads, setThreads] = useState(seedThreads);
   const [activeThread, setActiveThread] = useState('live');
+  const [chatListOpen, setChatListOpen] = useState(true);
   const [run, setRun] = useState(0); // remounts the flow on restart
 
   const onPlan = useCallback((p) => setPlan(p), []);
@@ -40,12 +44,13 @@ export default function App() {
   );
   const selectCaregiver = useCallback((c) => setPaywall({ caregiver: c }), []);
   const goToChat = () => setView('chat');
+  const askAssistant = () => setRightPanel('copilot');
 
   const restart = () => {
     setAnswers({});
     setPlan(null);
     setUnlocked(false);
-    setSidebarOpen(false);
+    setRightPanel(null);
     setPaywall(null);
     setThreads(seedThreads);
     setActiveThread('live');
@@ -73,8 +78,9 @@ export default function App() {
     }
     setAnswers({});
     setPlan(null);
-    setSidebarOpen(false);
+    setRightPanel(null);
     setActiveThread('live');
+    setChatListOpen(true);
     setView('chat');
     setRun((r) => r + 1);
   };
@@ -82,15 +88,23 @@ export default function App() {
   const selectThread = (id) => {
     setActiveThread(id);
     setView('chat');
-    setSidebarOpen(false);
+    setRightPanel(null);
+  };
+
+  const openPlanPanel = () => {
+    setRightPanel('plan');
+    setView('chat');
+    setActiveThread('live');
   };
 
   const openThread = threads.find((t) => t.id === activeThread);
 
-  const openPlan = () => {
-    setSidebarOpen(true);
-    setView('chat');
-  };
+  // The live chat is named after whatever it has produced so far.
+  const liveTitle = plan
+    ? `Care plan for ${plan.firstName}`
+    : Object.keys(answers).length
+      ? 'New care plan'
+      : 'New chat';
 
   // Requests only exist once the user has actually contacted someone.
   const hasBookings = unlocked;
@@ -105,8 +119,11 @@ export default function App() {
           badge={hasBookings ? statusCounts().pending : 0}
           threads={threads}
           activeThread={activeThread}
+          liveTitle={liveTitle}
           onSelectThread={selectThread}
           onNewChat={newChat}
+          chatListOpen={chatListOpen}
+          onToggleChatList={() => setChatListOpen((v) => !v)}
           onRestart={restart}
         />
       )}
@@ -130,6 +147,13 @@ export default function App() {
             className="chat-container"
             style={{ display: view === 'chat' && !openThread ? 'flex' : 'none' }}
           >
+            <ChatTopBar
+              title={liveTitle}
+              subtitle={plan ? 'Updated just now' : 'In progress'}
+              artifactLabel={plan ? 'Care plan' : null}
+              onArtifacts={() => setRightPanel('plan')}
+              onNewChat={newChat}
+            />
             <Chat
               key={`chat-${run}`}
               user={user}
@@ -138,13 +162,24 @@ export default function App() {
               plan={plan}
               onPlan={onPlan}
               unlocked={unlocked}
-              onOpenPlan={() => setSidebarOpen(true)}
+              onOpenPlan={() => setRightPanel('plan')}
               onSelectCaregiver={selectCaregiver}
             />
           </div>
 
           {view === 'chat' && openThread && (
             <div className="chat-container">
+              <ChatTopBar
+                title={openThread.title}
+                subtitle={`Archived · ${openThread.date}`}
+                artifactLabel="Care plan"
+                onArtifacts={() => {
+                  document
+                    .getElementById('archived-artifact')
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }}
+                onNewChat={newChat}
+              />
               <ArchivedChat
                 key={openThread.id}
                 thread={openThread}
@@ -157,29 +192,54 @@ export default function App() {
           {view !== 'chat' && (
             <div className="chat-container">
               {view === 'dashboard' && (
-                <Dashboard hasBookings={hasBookings} onGoToChat={goToChat} />
+                <Dashboard
+                  hasBookings={hasBookings}
+                  onGoToChat={goToChat}
+                  onAskAssistant={askAssistant}
+                />
               )}
               {view === 'plans' && (
-                <Plans plan={plan} onOpenPlan={openPlan} onGoToChat={goToChat} />
+                <Plans
+                  plan={plan}
+                  onOpenPlan={openPlanPanel}
+                  onGoToChat={goToChat}
+                  onAskAssistant={askAssistant}
+                />
               )}
               {view === 'profile' && (
-                <Profile user={user} answers={answers} onGoToChat={goToChat} />
+                <Profile
+                  user={user}
+                  answers={answers}
+                  onGoToChat={goToChat}
+                  onAskAssistant={askAssistant}
+                />
               )}
-              {view === 'settings' && <Settings unlocked={unlocked} />}
+              {view === 'settings' && (
+                <Settings unlocked={unlocked} onAskAssistant={askAssistant} />
+              )}
             </div>
           )}
         </>
       )}
 
       <AnimatePresence>
-        {sidebarOpen && plan && (
+        {rightPanel === 'plan' && plan && (
           <CaregiverSidebar
-            key="sidebar"
+            key="plan-panel"
             plan={plan}
             unlocked={unlocked}
             onSelectCaregiver={selectCaregiver}
             onUnlock={() => setPaywall({ caregiver: null })}
-            onClose={() => setSidebarOpen(false)}
+            onClose={() => setRightPanel(null)}
+          />
+        )}
+        {rightPanel === 'copilot' && (
+          <CopilotPanel
+            key="copilot-panel"
+            view={view}
+            plan={plan}
+            unlocked={unlocked}
+            onClose={() => setRightPanel(null)}
           />
         )}
       </AnimatePresence>
@@ -193,7 +253,7 @@ export default function App() {
             onPay={() => {
               setUnlocked(true);
               setPaywall(null);
-              setSidebarOpen(true);
+              setRightPanel('plan');
             }}
             onClose={() => setPaywall(null)}
           />

@@ -46,7 +46,7 @@ export default function ArchivedChat({ thread, user, onNewChat }) {
               That’s everything — here’s the plan for {plan.firstName}, and the caregivers who fit
               it best.
             </p>
-            <div className="workflow-card care-plan">
+            <div className="workflow-card care-plan" id="archived-artifact">
               <div className="doc is-static">
                 <div className="doc-head">
                   <FileText size={14} strokeWidth={1.75} className="doc-icon" />
