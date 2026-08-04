@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   ChevronDown,
   FileText,
@@ -8,13 +9,66 @@ import {
   Settings,
   User,
 } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
 import Logo from './Logo';
 
 const FOOTER_ITEMS = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
+
+// A nav row that folds a list of its own away — used by Chat and Care plans.
+function Section({ id, label, icon: Icon, active, onOpen, open, onToggle, onAdd, children }) {
+  return (
+    <>
+      <div className={`nav-item has-action${active ? ' is-active' : ''}`}>
+        <button
+          type="button"
+          className="nav-item-main"
+          onClick={onOpen}
+          aria-current={active ? 'page' : undefined}
+        >
+          <Icon size={16} strokeWidth={1.75} />
+          <span>{label}</span>
+        </button>
+        <button
+          type="button"
+          className="nav-inline-btn"
+          onClick={onToggle}
+          aria-label={open ? `Collapse ${label}` : `Expand ${label}`}
+          aria-expanded={open}
+        >
+          <ChevronDown size={15} strokeWidth={2} className={`toggle-chevron${open ? '' : ' is-up'}`} />
+        </button>
+        {onAdd && (
+          <button
+            type="button"
+            className="nav-inline-btn"
+            onClick={onAdd}
+            aria-label={`New ${id}`}
+            title="New chat"
+          >
+            <Plus size={15} strokeWidth={2} />
+          </button>
+        )}
+      </div>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key={`${id}-list`}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="nav-sub">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
 
 export default function AppNav({
   view,
@@ -28,6 +82,11 @@ export default function AppNav({
   onNewChat,
   chatListOpen,
   onToggleChatList,
+  planEntries,
+  selectedPlan,
+  onSelectPlan,
+  planListOpen,
+  onTogglePlanList,
   onRestart,
 }) {
   const initials =
@@ -39,20 +98,6 @@ export default function AppNav({
       .join('')
       .toUpperCase() || 'NP';
 
-  const item = ({ id, label, icon: Icon }) => (
-    <button
-      key={id}
-      type="button"
-      className={`nav-item${view === id ? ' is-active' : ''}`}
-      onClick={() => onView(id)}
-      aria-current={view === id ? 'page' : undefined}
-    >
-      <Icon size={16} strokeWidth={1.75} />
-      <span>{label}</span>
-      {id === 'dashboard' && badge > 0 && <span className="nav-badge">{badge}</span>}
-    </button>
-  );
-
   return (
     <nav className="app-nav">
       <div className="nav-head">
@@ -60,83 +105,87 @@ export default function AppNav({
       </div>
 
       <div className="nav-group">
-        {/* the chevron folds the thread list away, and new-chat sits on the row
-            itself so neither needs the list open first */}
-        <div className={`nav-item has-action${view === 'chat' ? ' is-active' : ''}`}>
+        <Section
+          id="chat"
+          label="Chat"
+          icon={MessageSquare}
+          active={view === 'chat'}
+          onOpen={() => onView('chat')}
+          open={chatListOpen}
+          onToggle={onToggleChatList}
+          onAdd={onNewChat}
+        >
           <button
             type="button"
-            className="nav-item-main"
-            onClick={() => onView('chat')}
-            aria-current={view === 'chat' ? 'page' : undefined}
+            className={`nav-sub-item${activeThread === 'live' ? ' is-active' : ''}`}
+            onClick={() => onSelectThread('live')}
           >
-            <MessageSquare size={16} strokeWidth={1.75} />
-            <span>Chat</span>
+            <span className="nav-sub-label">{liveTitle}</span>
+            <span className="nav-sub-date">Current</span>
           </button>
-          <button
-            type="button"
-            className="nav-inline-btn"
-            onClick={onToggleChatList}
-            aria-label={chatListOpen ? 'Collapse chats' : 'Expand chats'}
-            aria-expanded={chatListOpen}
-          >
-            <ChevronDown
-              size={15}
-              strokeWidth={2}
-              className={`toggle-chevron${chatListOpen ? '' : ' is-up'}`}
-            />
-          </button>
-          <button
-            type="button"
-            className="nav-inline-btn"
-            onClick={onNewChat}
-            aria-label="New chat"
-            title="New chat"
-          >
-            <Plus size={15} strokeWidth={2} />
-          </button>
-        </div>
-
-        <AnimatePresence initial={false}>
-          {chatListOpen && (
-            <motion.div
-              key="threads"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
-              style={{ overflow: 'hidden' }}
+          {threads.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className={`nav-sub-item${activeThread === t.id ? ' is-active' : ''}`}
+              onClick={() => onSelectThread(t.id)}
             >
-              <div className="nav-sub">
-                <button
-                  type="button"
-                  className={`nav-sub-item${activeThread === 'live' ? ' is-active' : ''}`}
-                  onClick={() => onSelectThread('live')}
-                >
-                  <span className="nav-sub-label">{liveTitle}</span>
-                  <span className="nav-sub-date">Current</span>
-                </button>
-                {threads.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    className={`nav-sub-item${activeThread === t.id ? ' is-active' : ''}`}
-                    onClick={() => onSelectThread(t.id)}
-                  >
-                    <span className="nav-sub-label">{t.title}</span>
-                    <span className="nav-sub-date">{t.date}</span>
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <span className="nav-sub-label">{t.title}</span>
+              <span className="nav-sub-date">{t.date}</span>
+            </button>
+          ))}
+        </Section>
 
-        {item({ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard })}
-        {item({ id: 'plans', label: 'Care plans', icon: FileText })}
+        <button
+          type="button"
+          className={`nav-item${view === 'dashboard' ? ' is-active' : ''}`}
+          onClick={() => onView('dashboard')}
+          aria-current={view === 'dashboard' ? 'page' : undefined}
+        >
+          <LayoutDashboard size={16} strokeWidth={1.75} />
+          <span>Dashboard</span>
+          {badge > 0 && <span className="nav-badge">{badge}</span>}
+        </button>
+
+        <Section
+          id="plan"
+          label="Care plans"
+          icon={FileText}
+          active={view === 'plans' || view === 'plan-detail'}
+          onOpen={() => onView('plans')}
+          open={planListOpen}
+          onToggle={onTogglePlanList}
+        >
+          {planEntries.length === 0 && <p className="nav-sub-empty">No plans yet</p>}
+          {planEntries.map((e) => (
+            <button
+              key={e.id}
+              type="button"
+              className={`nav-sub-item${
+                view === 'plan-detail' && selectedPlan === e.id ? ' is-active' : ''
+              }`}
+              onClick={() => onSelectPlan(e.id)}
+            >
+              <span className="nav-sub-label">{e.title}</span>
+              <span className="nav-sub-date">{e.archived ? e.date : 'Active'}</span>
+            </button>
+          ))}
+        </Section>
       </div>
 
       <div className="nav-group nav-group-end">
-        {FOOTER_ITEMS.map(item)}
+        {FOOTER_ITEMS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            type="button"
+            className={`nav-item${view === id ? ' is-active' : ''}`}
+            onClick={() => onView(id)}
+            aria-current={view === id ? 'page' : undefined}
+          >
+            <Icon size={16} strokeWidth={1.75} />
+            <span>{label}</span>
+          </button>
+        ))}
         <div className="nav-user">
           <span className="cg-avatar">{initials}</span>
           <span className="nav-user-text">

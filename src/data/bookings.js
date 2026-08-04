@@ -50,23 +50,3 @@ export function statusCounts() {
   );
 }
 
-// Earlier plans, so the history section has something to show. The live plan is
-// prepended by the Plans screen when one exists.
-export const archivedPlans = [
-  {
-    id: 'may',
-    name: 'Milica Stevanović',
-    date: '12 May 2026',
-    status: 'Archived',
-    caregivers: 4,
-    note: 'Before the mobility change — daytime visits only.',
-  },
-  {
-    id: 'february',
-    name: 'Milica Stevanović',
-    date: '3 February 2026',
-    status: 'Archived',
-    caregivers: 3,
-    note: 'First plan, after the hospital discharge.',
-  },
-];

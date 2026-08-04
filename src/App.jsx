@@ -12,9 +12,10 @@ import ChatTopBar from './components/ChatTopBar';
 import CaregiverSidebar from './components/CaregiverSidebar';
 import CopilotPanel from './components/CopilotPanel';
 import PaywallModal from './components/PaywallModal';
+import PlanDetail from './screens/PlanDetail';
 import { statusCounts } from './data/bookings';
 import { caregivers } from './data/carePlan';
-import { seedThreads } from './data/threads';
+import { planEntries, seedThreads } from './data/threads';
 
 const formatToday = () =>
   new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -35,6 +36,8 @@ export default function App() {
   const [threads, setThreads] = useState(seedThreads);
   const [activeThread, setActiveThread] = useState('live');
   const [chatListOpen, setChatListOpen] = useState(true);
+  const [planListOpen, setPlanListOpen] = useState(true);
+  const [selectedPlan, setSelectedPlan] = useState('live');
   const [run, setRun] = useState(0); // remounts the flow on restart
 
   const onPlan = useCallback((p) => setPlan(p), []);
@@ -91,13 +94,23 @@ export default function App() {
     setRightPanel(null);
   };
 
-  const openPlanPanel = () => {
-    setRightPanel('plan');
-    setView('chat');
-    setActiveThread('live');
+  // From the Care plans side a plan opens as its own page; from the chat it stays
+  // a side panel, because there it is an artifact of the conversation.
+  const openPlanPage = (id) => {
+    setSelectedPlan(id);
+    setView('plan-detail');
+    setPlanListOpen(true);
   };
 
   const openThread = threads.find((t) => t.id === activeThread);
+
+  const entries = planEntries({
+    plan,
+    threads,
+    caregiverCount: caregivers.length,
+    today: formatToday(),
+  });
+  const openEntry = entries.find((e) => e.id === selectedPlan) || entries[0];
 
   // The live chat is named after whatever it has produced so far.
   const liveTitle = plan
@@ -124,6 +137,11 @@ export default function App() {
           onNewChat={newChat}
           chatListOpen={chatListOpen}
           onToggleChatList={() => setChatListOpen((v) => !v)}
+          planEntries={entries}
+          selectedPlan={selectedPlan}
+          onSelectPlan={openPlanPage}
+          planListOpen={planListOpen}
+          onTogglePlanList={() => setPlanListOpen((v) => !v)}
           onRestart={restart}
         />
       )}
@@ -200,9 +218,19 @@ export default function App() {
               )}
               {view === 'plans' && (
                 <Plans
-                  plan={plan}
-                  onOpenPlan={openPlanPanel}
+                  entries={entries}
+                  onOpenPlan={openPlanPage}
                   onGoToChat={goToChat}
+                  onAskAssistant={askAssistant}
+                />
+              )}
+              {view === 'plan-detail' && openEntry && (
+                <PlanDetail
+                  entry={openEntry}
+                  unlocked={unlocked}
+                  onBack={() => setView('plans')}
+                  onSelectCaregiver={selectCaregiver}
+                  onUnlock={() => setPaywall({ caregiver: null })}
                   onAskAssistant={askAssistant}
                 />
               )}

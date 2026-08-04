@@ -1,3 +1,5 @@
+import { buildPlan } from './carePlan';
+
 // Past conversations. A thread keeps the answers it collected, so opening it
 // replays the same question cards the live chat renders — just read only.
 export const seedThreads = [
@@ -104,3 +106,34 @@ export const seedThreads = [
     ],
   },
 ];
+
+// One list for every care plan the user has: the live one plus each past thread.
+// The Care plans page, its detail page and the nav all read from this, so they
+// can never disagree about what exists.
+export function planEntries({ plan, threads, caregiverCount, today }) {
+  const live = plan
+    ? {
+        id: 'live',
+        plan,
+        title: `Care plan for ${plan.name}`,
+        date: today,
+        status: 'Active',
+        summary: plan.summary,
+        caregiverCount,
+        archived: false,
+      }
+    : null;
+
+  const past = threads.map((t) => ({
+    id: t.id,
+    plan: buildPlan(t.answers),
+    title: `Care plan for ${t.answers['basic-info']?.values?.name ?? 'your loved one'}`,
+    date: t.date,
+    status: 'Archived',
+    summary: t.summary,
+    caregiverCount: t.caregivers,
+    archived: true,
+  }));
+
+  return [live, ...past].filter(Boolean);
+}
