@@ -64,7 +64,7 @@ export default function App() {
           title: `Care plan for ${plan.firstName}`,
           date: formatToday(),
           summary: plan.summary,
-          facts: plan.facts,
+          answers,
           caregivers: caregivers.length,
           messages: [],
         },
@@ -145,7 +145,12 @@ export default function App() {
 
           {view === 'chat' && openThread && (
             <div className="chat-container">
-              <ArchivedChat key={openThread.id} thread={openThread} onNewChat={newChat} />
+              <ArchivedChat
+                key={openThread.id}
+                thread={openThread}
+                user={user}
+                onNewChat={newChat}
+              />
             </div>
           )}
 

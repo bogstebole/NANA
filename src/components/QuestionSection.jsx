@@ -14,7 +14,15 @@ export const FOLDABLE_FROM = 3;
 
 // One step of the questionnaire — the grey card holding its questions. Folds down
 // to a summary once the conversation has moved past it.
-export default function QuestionSection({ step, answers, activeIndex, collapsible, onCommit, onEdit }) {
+export default function QuestionSection({
+  step,
+  answers,
+  activeIndex,
+  collapsible,
+  onCommit,
+  onEdit,
+  readOnly,
+}) {
   const [expanded, setExpanded] = useState(false);
   const truncated = collapsible && !expanded;
 
@@ -35,6 +43,7 @@ export default function QuestionSection({ step, answers, activeIndex, collapsibl
                 state={i === activeIndex ? 'active' : answers[q.id] ? 'collapsed' : 'upcoming'}
                 isActive={i === activeIndex}
                 answer={answers[q.id]}
+                readOnly={readOnly}
                 onCommit={(a) => onCommit(q.id, a)}
                 onEdit={() => onEdit(i)}
               />

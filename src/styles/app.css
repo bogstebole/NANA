@@ -238,6 +238,10 @@ input {
 }
 
 /* collapsed card */
+.collapsed-card.is-static {
+  cursor: default;
+}
+
 .collapsed-card {
   display: flex;
   align-items: center;
@@ -1087,6 +1091,47 @@ input {
   font-weight: var(--font-medium);
 }
 
+/* row that carries its own action button — padding moves onto the inner button
+   so the whole label stays clickable */
+.nav-item.has-action {
+  padding: 0;
+}
+
+.nav-item-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) 4px var(--spacing-2) var(--spacing-2-5);
+  color: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: inherit;
+}
+
+.nav-inline-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-right: 6px;
+  border-radius: 6px;
+  color: var(--text-disabled);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.nav-inline-btn:hover {
+  background: var(--surface-0);
+  color: var(--primary-highlight);
+}
+
+.nav-item.is-active .nav-inline-btn {
+  color: var(--primary-highlight);
+}
+
 /* ---------- Chat thread list ---------- */
 
 .nav-sub {
@@ -1121,23 +1166,6 @@ input {
   color: var(--text-primary);
 }
 
-.nav-sub-item.is-new {
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
-  color: var(--primary-highlight);
-  font-weight: var(--font-medium);
-}
-
-.nav-sub-item.is-new:hover {
-  background: var(--primary-subtle);
-  color: var(--primary-highlight);
-}
-
-.nav-sub-item.is-new svg {
-  flex-shrink: 0;
-}
-
 .nav-sub-label {
   font-size: var(--text-xs-size);
   line-height: var(--text-xs-leading);
@@ -1154,11 +1182,6 @@ input {
   font-size: 11px;
   line-height: 14px;
   color: var(--text-disabled);
-}
-
-.nav-sub-item.is-new span {
-  font-size: var(--text-xs-size);
-  line-height: var(--text-xs-leading);
 }
 
 /* ---------- Archived thread ---------- */

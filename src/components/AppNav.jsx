@@ -55,15 +55,32 @@ export default function AppNav({
       </div>
 
       <div className="nav-group">
-        {item({ id: 'chat', label: 'Chat', icon: MessageSquare })}
+        {/* the new-chat action sits on the row itself, so it is reachable without
+            opening the thread list first */}
+        <div className={`nav-item has-action${view === 'chat' ? ' is-active' : ''}`}>
+          <button
+            type="button"
+            className="nav-item-main"
+            onClick={() => onView('chat')}
+            aria-current={view === 'chat' ? 'page' : undefined}
+          >
+            <MessageSquare size={16} strokeWidth={1.75} />
+            <span>Chat</span>
+          </button>
+          <button
+            type="button"
+            className="nav-inline-btn"
+            onClick={onNewChat}
+            aria-label="New chat"
+            title="New chat"
+          >
+            <Plus size={15} strokeWidth={2} />
+          </button>
+        </div>
 
         {/* the thread list only unfolds while the chat is the current view */}
         {view === 'chat' && (
           <div className="nav-sub">
-            <button type="button" className="nav-sub-item is-new" onClick={onNewChat}>
-              <Plus size={14} strokeWidth={2} />
-              <span>New chat</span>
-            </button>
             <button
               type="button"
               className={`nav-sub-item${activeThread === 'live' ? ' is-active' : ''}`}

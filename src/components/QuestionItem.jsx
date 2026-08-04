@@ -131,7 +131,16 @@ function ActiveBody({ question, answer, onCommit }) {
   );
 }
 
-export default function QuestionItem({ question, number, state, answer, onCommit, onEdit, isActive }) {
+export default function QuestionItem({
+  question,
+  number,
+  state,
+  answer,
+  onCommit,
+  onEdit,
+  isActive,
+  readOnly,
+}) {
   const isCard = state !== 'upcoming';
 
   let className;
@@ -162,17 +171,19 @@ export default function QuestionItem({ question, number, state, answer, onCommit
           {answerChips(question, answer).map((chip, i) => (
             <Chip key={`${chip}-${i}`}>{chip}</Chip>
           ))}
-          <Button
-            variant="secondary"
-            iconOnly
-            aria-label="Edit answer"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit();
-            }}
-          >
-            <Pencil size={14} strokeWidth={1.75} />
-          </Button>
+          {!readOnly && (
+            <Button
+              variant="secondary"
+              iconOnly
+              aria-label="Edit answer"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
+            >
+              <Pencil size={14} strokeWidth={1.75} />
+            </Button>
+          )}
         </div>
       </>
     );
@@ -202,8 +213,8 @@ export default function QuestionItem({ question, number, state, answer, onCommit
         <motion.div
           key={state}
           layout="position"
-          className={className}
-          onClick={state === 'collapsed' ? onEdit : undefined}
+          className={`${className}${readOnly ? ' is-static' : ''}`}
+          onClick={state === 'collapsed' && !readOnly ? onEdit : undefined}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1, transition: { duration: 0.2, delay: 0.12 } }}
           exit={{ opacity: 0, transition: { duration: 0.12 } }}

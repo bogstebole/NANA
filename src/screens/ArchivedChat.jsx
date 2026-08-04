@@ -1,5 +1,8 @@
 import { motion } from 'framer-motion';
 import { Archive, FileText } from 'lucide-react';
+import { steps } from '../data/flow';
+import { buildPlan } from '../data/carePlan';
+import QuestionSection from '../components/QuestionSection';
 import Button from '../components/Button';
 
 const messageMotion = {
@@ -7,19 +10,42 @@ const messageMotion = {
   animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut' } },
 };
 
-// A past conversation, read only. It shows what the chat concluded rather than
-// replaying the questionnaire — the summary, the facts it collected, and whatever
-// was said afterwards.
-export default function ArchivedChat({ thread, onNewChat }) {
+const noop = () => {};
+
+// A past conversation replayed read only: the same messages and question cards
+// the live chat renders, with editing taken away.
+export default function ArchivedChat({ thread, user, onNewChat }) {
+  const plan = buildPlan(thread.answers);
+
   return (
     <div className="chat">
       <div className="chat-scroll">
         <div className="chat-column">
           <motion.p className="assistant-text" {...messageMotion}>
-            This is the plan we put together on {thread.date}.
+            Hi {user.name.split(' ')[0]} — I’ll ask you a few things about the person you’re caring
+            for, then put together a care plan with caregivers matched to it.
           </motion.p>
 
+          {steps.map((step) => (
+            <motion.div className="chat-message" key={step.id} {...messageMotion}>
+              <p className="assistant-text">{step.intro}</p>
+              <QuestionSection
+                step={step}
+                answers={thread.answers}
+                activeIndex={null}
+                collapsible={step.questions.length >= 3}
+                readOnly
+                onCommit={noop}
+                onEdit={noop}
+              />
+            </motion.div>
+          ))}
+
           <motion.div className="chat-message" {...messageMotion}>
+            <p className="assistant-text">
+              That’s everything — here’s the plan for {plan.firstName}, and the caregivers who fit
+              it best.
+            </p>
             <div className="workflow-card care-plan">
               <div className="doc is-static">
                 <div className="doc-head">
@@ -28,7 +54,7 @@ export default function ArchivedChat({ thread, onNewChat }) {
                     <p className="doc-eyebrow">
                       Care plan <span className="doc-meta">· {thread.date}</span>
                     </p>
-                    <p className="doc-title">{thread.title}</p>
+                    <p className="doc-title">Care plan for {plan.name}</p>
                   </div>
                   <span className="status-pill is-muted">Archived</span>
                 </div>
@@ -36,7 +62,7 @@ export default function ArchivedChat({ thread, onNewChat }) {
                 <p className="doc-p">{thread.summary}</p>
 
                 <div className="facts">
-                  {thread.facts.map((f) => (
+                  {plan.facts.map((f) => (
                     <div className="fact" key={f.label}>
                       <span className="fact-label">{f.label}</span>
                       <span className="fact-value">{f.value}</span>
@@ -44,9 +70,7 @@ export default function ArchivedChat({ thread, onNewChat }) {
                   ))}
                 </div>
 
-                <p className="tip-body">
-                  {thread.caregivers} caregivers were matched to this plan.
-                </p>
+                <p className="tip-body">{thread.caregivers} caregivers were matched to this plan.</p>
               </div>
             </div>
           </motion.div>
