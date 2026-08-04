@@ -53,6 +53,14 @@
 
   --border-subtle: var(--color-neutral-200);
 
+  /* ---- semantic: status (from the Tailwind config colour scales) ---- */
+  --status-ok-bg: #f0fdf4;
+  --status-ok-fg: #008236;
+  --status-wait-bg: #fffbeb;
+  --status-wait-fg: #bb4d00;
+  --status-no-bg: #fef2f2;
+  --status-no-fg: #c10007;
+
   /* ---- spacing (Tailwind scale) ---- */
   --spacing-0-5: 2px;
   --spacing-1: 4px;

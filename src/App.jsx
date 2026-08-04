@@ -1,15 +1,22 @@
 import { useCallback, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { RotateCcw } from 'lucide-react';
-import Logo from './components/Logo';
 import Register from './screens/Register';
 import Chat from './screens/Chat';
+import Dashboard from './screens/Dashboard';
+import Plans from './screens/Plans';
+import Profile from './screens/Profile';
+import Settings from './screens/Settings';
+import AppNav from './components/AppNav';
 import CaregiverSidebar from './components/CaregiverSidebar';
 import PaywallModal from './components/PaywallModal';
+import { statusCounts } from './data/bookings';
 
 export default function App() {
-  const [phase, setPhase] = useState('register'); // register | chat
+  const [phase, setPhase] = useState('register'); // register | app
+  const [view, setView] = useState('chat');
   const [user, setUser] = useState({ name: '', email: '' });
+  // answers live here so the profile can read them without a second source of truth
+  const [answers, setAnswers] = useState({});
   const [plan, setPlan] = useState(null);
   const [unlocked, setUnlocked] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -19,50 +26,89 @@ export default function App() {
   const [run, setRun] = useState(0); // remounts the flow on restart
 
   const onPlan = useCallback((p) => setPlan(p), []);
+  const onAnswer = useCallback(
+    (questionId, answer) => setAnswers((a) => ({ ...a, [questionId]: answer })),
+    []
+  );
   const selectCaregiver = useCallback((c) => setPaywall({ caregiver: c }), []);
+  const goToChat = () => setView('chat');
 
   const restart = () => {
+    setAnswers({});
     setPlan(null);
     setUnlocked(false);
     setSidebarOpen(false);
     setPaywall(null);
+    setView('chat');
     setRun((r) => r + 1);
     setPhase('register');
   };
 
+  const openPlan = () => {
+    setSidebarOpen(true);
+    setView('chat');
+  };
+
+  // Requests only exist once the user has actually contacted someone.
+  const hasBookings = unlocked;
+
   return (
     <div className="app">
-      <div className="chat-container">
-        {phase === 'chat' && (
-          <div className="chat-header">
-            <Logo width={120} />
-            <button type="button" className="ci-btn header-restart" onClick={restart} aria-label="Start over">
-              <RotateCcw size={16} strokeWidth={1.75} />
-            </button>
-          </div>
-        )}
-        <AnimatePresence mode="wait">
-          {phase === 'register' ? (
+      {phase === 'app' && (
+        <AppNav
+          view={view}
+          onView={setView}
+          user={user}
+          badge={hasBookings ? statusCounts().pending : 0}
+          onRestart={restart}
+        />
+      )}
+
+      {phase === 'register' ? (
+        <div className="chat-container">
+          <AnimatePresence mode="wait">
             <Register
               key={`register-${run}`}
               onContinue={(u) => {
                 setUser(u);
-                setPhase('chat');
+                setPhase('app');
               }}
             />
-          ) : (
+          </AnimatePresence>
+        </div>
+      ) : (
+        <>
+          {/* the chat stays mounted behind the other views so its progress survives */}
+          <div className="chat-container" style={{ display: view === 'chat' ? 'flex' : 'none' }}>
             <Chat
               key={`chat-${run}`}
               user={user}
+              answers={answers}
+              onAnswer={onAnswer}
               plan={plan}
               onPlan={onPlan}
               unlocked={unlocked}
               onOpenPlan={() => setSidebarOpen(true)}
               onSelectCaregiver={selectCaregiver}
             />
+          </div>
+
+          {view !== 'chat' && (
+            <div className="chat-container">
+              {view === 'dashboard' && (
+                <Dashboard hasBookings={hasBookings} onGoToChat={goToChat} />
+              )}
+              {view === 'plans' && (
+                <Plans plan={plan} onOpenPlan={openPlan} onGoToChat={goToChat} />
+              )}
+              {view === 'profile' && (
+                <Profile user={user} answers={answers} onGoToChat={goToChat} />
+              )}
+              {view === 'settings' && <Settings unlocked={unlocked} />}
+            </div>
           )}
-        </AnimatePresence>
-      </div>
+        </>
+      )}
 
       <AnimatePresence>
         {sidebarOpen && plan && (

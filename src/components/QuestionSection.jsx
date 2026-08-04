@@ -4,14 +4,13 @@ import { ChevronDown } from 'lucide-react';
 import QuestionItem from './QuestionItem';
 import Button from './Button';
 
-// Height of a finished section: two full rows and a hint of the next, so it is
-// obvious the list continues under the fade.
-const COLLAPSED_HEIGHT = 140;
+// A finished section keeps its first row readable and cuts into the second, so
+// there is no dead grey space between the fade and the toggle.
+const COLLAPSED_HEIGHT = 96;
+const FADE_HEIGHT = 52;
 
-// The toggle costs ~44px of its own, and a collapsed row is 44px — so folding a
-// section that only hides one row saves nothing. Measured: a 4-row section drops
-// 288px → 216px, a 3-row one only 232px → 216px. Fold from four rows up.
-export const FOLDABLE_FROM = 4;
+// Fold from three rows up, so every section behaves the same way.
+export const FOLDABLE_FROM = 3;
 
 // One step of the questionnaire — the grey card holding its questions. Folds down
 // to a summary once the conversation has moved past it.
@@ -47,6 +46,7 @@ export default function QuestionSection({ step, answers, activeIndex, collapsibl
               <motion.div
                 key="fade"
                 className="answers-fade"
+                style={{ height: FADE_HEIGHT }}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}

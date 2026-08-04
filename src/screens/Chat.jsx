@@ -38,8 +38,16 @@ function Typing() {
   );
 }
 
-export default function Chat({ user, plan, onPlan, unlocked, onOpenPlan, onSelectCaregiver }) {
-  const [answers, setAnswers] = useState({});
+export default function Chat({
+  user,
+  answers,
+  onAnswer,
+  plan,
+  onPlan,
+  unlocked,
+  onOpenPlan,
+  onSelectCaregiver,
+}) {
   const [editing, setEditing] = useState(null); // { stepId, index }
   const [revealed, setRevealed] = useState(1);
   const [planReady, setPlanReady] = useState(false);
@@ -60,7 +68,7 @@ export default function Chat({ user, plan, onPlan, unlocked, onOpenPlan, onSelec
   };
 
   const commit = (questionId, answer) => {
-    setAnswers((a) => ({ ...a, [questionId]: answer }));
+    onAnswer(questionId, answer);
     setEditing(null);
   };
 

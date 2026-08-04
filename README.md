@@ -11,11 +11,28 @@ npm run dev
 
 Opens on http://localhost:5180.
 
+## Shell
+
+After registering, the user is inside their own account: a left nav with **Chat**,
+**Dashboard**, **Care plans**, **Profile** and **Settings**. The chat stays mounted
+behind the other views so switching away never loses its progress, and `answers`
+lives in `App` so the profile reads the same data the assistant collected — no
+second source of truth.
+
+- **Dashboard** — every caregiver request and where it stands: accepted, waiting, or declined. A decline always carries the reason, so the user is never left guessing. Empty until they've actually contacted someone.
+- **Care plans** — the live plan plus archived ones, newest first.
+- **Profile** — account details and everything the questionnaire collected, editable back in the chat.
+- **Settings** — notification toggles, subscription state, account actions.
+
+The nav, statuses and screens are placeholder structure for the concept — mock data
+lives in `src/data/bookings.js`, and status colours come from the Tailwind config
+scales, so replacing them with the real design is a styling job, not a rewrite.
+
 ## Flow
 
-The whole thing is framed as an AI chat. There is no wizard footer — the assistant
-posts one step at a time, the answered cards stay in the thread as artifacts, and
-the composer at the bottom is the only persistent control.
+The questionnaire itself is framed as an AI chat. There is no wizard footer — the
+assistant posts one section at a time, the answered cards stay in the thread as
+artifacts, and the composer at the bottom is the only persistent control.
 
 1. **Register** — name + email (both required, email validated)
 2. **Chat** — the assistant greets the user, then works through four sections one at
