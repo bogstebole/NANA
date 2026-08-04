@@ -1,16 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
-import { ChevronDown } from 'lucide-react';
-import { questions } from '../data/flow';
+import { AnimatePresence, motion } from 'framer-motion';
+import { steps } from '../data/flow';
 import { buildPlan } from '../data/carePlan';
-import QuestionItem from '../components/QuestionItem';
+import QuestionSection, { FOLDABLE_FROM } from '../components/QuestionSection';
 import CarePlanCard from '../components/CarePlanCard';
 import ChatInput from '../components/ChatInput';
-import Button from '../components/Button';
-
-// Height of the answered list once everything is done: two full rows and a hint
-// of the third, so it is obvious the list continues under the fade.
-const COLLAPSED_HEIGHT = 140;
 
 const REPLIES = {
   locked: [
@@ -46,38 +40,46 @@ function Typing() {
 
 export default function Chat({ user, plan, onPlan, unlocked, onOpenPlan, onSelectCaregiver }) {
   const [answers, setAnswers] = useState({});
-  const [editing, setEditing] = useState(null);
+  const [editing, setEditing] = useState(null); // { stepId, index }
+  const [revealed, setRevealed] = useState(1);
   const [planReady, setPlanReady] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [chatLog, setChatLog] = useState([]);
-  const [answersExpanded, setAnswersExpanded] = useState(false);
   const scrollRef = useRef(null);
   const replyIndex = useRef(0);
 
-  const allAnswered = questions.every((q) => answers[q.id]);
-  const firstUnanswered = questions.findIndex((q) => !answers[q.id]);
-  const activeIndex = editing != null ? editing : firstUnanswered === -1 ? null : firstUnanswered;
+  const currentStep = steps[revealed - 1];
+  const currentDone = currentStep?.questions.every((q) => answers[q.id]) ?? false;
 
-  // Once every question is answered the list folds down to a summary. Editing a
-  // card opens it back up, so the active card is never hidden under the fade.
-  const collapsible = allAnswered && activeIndex === null;
-  const truncated = collapsible && !answersExpanded;
+  // Only one question is ever active. An explicit edit wins; otherwise it is the
+  // first unanswered question, which can only be in the step still in progress.
+  const activeIndexFor = (step) => {
+    if (editing) return editing.stepId === step.id ? editing.index : null;
+    const i = step.questions.findIndex((q) => !answers[q.id]);
+    return i === -1 ? null : i;
+  };
 
   const commit = (questionId, answer) => {
     setAnswers((a) => ({ ...a, [questionId]: answer }));
     setEditing(null);
   };
 
-  // Once every question is answered the assistant "thinks", then posts the plan.
+  // Finishing a step makes the assistant "think", then introduce the next one —
+  // and after the last step, post the care plan.
   useEffect(() => {
-    if (!allAnswered || planReady) return;
+    if (!currentDone || editing) return;
+    if (revealed >= steps.length && planReady) return;
     setThinking(true);
-    const t = setTimeout(() => {
-      setThinking(false);
-      setPlanReady(true);
-    }, 1500);
+    const t = setTimeout(
+      () => {
+        setThinking(false);
+        if (revealed < steps.length) setRevealed((r) => r + 1);
+        else setPlanReady(true);
+      },
+      revealed < steps.length ? 1100 : 1600
+    );
     return () => clearTimeout(t);
-  }, [allAnswered, planReady]);
+  }, [currentDone, editing, revealed, planReady]);
 
   // Keep the plan in sync so editing an earlier answer updates the artifact.
   useEffect(() => {
@@ -90,7 +92,7 @@ export default function Chat({ user, plan, onPlan, unlocked, onOpenPlan, onSelec
       if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
     }, 120);
     return () => clearTimeout(t);
-  }, [thinking, planReady, chatLog.length]);
+  }, [revealed, thinking, planReady, chatLog.length]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -99,7 +101,7 @@ export default function Chat({ user, plan, onPlan, unlocked, onOpenPlan, onSelec
         ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, 420);
     return () => clearTimeout(t);
-  }, [activeIndex]);
+  }, [editing, revealed]);
 
   const send = (text) => {
     const id = Date.now();
@@ -119,74 +121,35 @@ export default function Chat({ user, plan, onPlan, unlocked, onOpenPlan, onSelec
     <div className="chat">
       <div className="chat-scroll" ref={scrollRef}>
         <div className="chat-column">
-          <motion.div className="chat-message" {...messageMotion}>
-            <p className="assistant-text">
-              Hi {user.name.split(' ')[0]} — I’ll ask you a few things about the person you’re
-              caring for, then put together a care plan with caregivers matched to it.
-            </p>
-            <p className="assistant-text">
-              Let’s get started. First, we need few information about an elderly person.
-            </p>
+          <motion.p className="assistant-text" {...messageMotion}>
+            Hi {user.name.split(' ')[0]} — I’ll ask you a few things about the person you’re caring
+            for, then put together a care plan with caregivers matched to it.
+          </motion.p>
 
-            {/* one section for every question: answered ones collapse, one is active,
-                and the rest stay listed so the remaining effort is always visible */}
-            <LayoutGroup>
-              <motion.div layout className="workflow-card" style={{ borderRadius: 32 }}>
-                <div className="answers-wrap">
-                  <motion.div
-                    className="answers"
-                    animate={collapsible ? { height: truncated ? COLLAPSED_HEIGHT : 'auto' } : {}}
-                    transition={{ type: 'spring', stiffness: 260, damping: 32 }}
-                  >
-                    {questions.map((q, i) => (
-                      <QuestionItem
-                        key={q.id}
-                        question={q}
-                        number={i + 1}
-                        state={
-                          i === activeIndex ? 'active' : answers[q.id] ? 'collapsed' : 'upcoming'
-                        }
-                        isActive={i === activeIndex}
-                        answer={answers[q.id]}
-                        onCommit={(a) => commit(q.id, a)}
-                        onEdit={() => setEditing(i)}
-                      />
-                    ))}
-                  </motion.div>
-
-                  <AnimatePresence>
-                    {truncated && (
-                      <motion.div
-                        key="fade"
-                        className="answers-fade"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                      />
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                {collapsible && (
-                  <div className="answers-toggle">
-                    <Button
-                      variant="secondary"
-                      onClick={() => setAnswersExpanded((v) => !v)}
-                      aria-expanded={answersExpanded}
-                    >
-                      {answersExpanded ? 'Hide answers' : 'See all answers'}
-                      <ChevronDown
-                        size={14}
-                        strokeWidth={1.75}
-                        className={`toggle-chevron${answersExpanded ? ' is-up' : ''}`}
-                      />
-                    </Button>
-                  </div>
-                )}
+          {steps.slice(0, revealed).map((step, si) => {
+            const activeIndex = activeIndexFor(step);
+            const complete = step.questions.every((q) => answers[q.id]);
+            // a section folds away once the conversation has moved past it, but only
+            // when it is long enough for folding to actually save room
+            const collapsible =
+              complete &&
+              activeIndex === null &&
+              (si < revealed - 1 || planReady) &&
+              step.questions.length >= FOLDABLE_FROM;
+            return (
+              <motion.div className="chat-message" key={step.id} {...messageMotion}>
+                <p className="assistant-text">{step.intro}</p>
+                <QuestionSection
+                  step={step}
+                  answers={answers}
+                  activeIndex={activeIndex}
+                  collapsible={collapsible}
+                  onCommit={commit}
+                  onEdit={(index) => setEditing({ stepId: step.id, index })}
+                />
               </motion.div>
-            </LayoutGroup>
-          </motion.div>
+            );
+          })}
 
           {planReady && plan && (
             <motion.div className="chat-message" {...messageMotion}>

@@ -6,8 +6,7 @@
 export const steps = [
   {
     id: 'elderly-profile',
-    eyebrow: 'Elderly profile',
-    title: 'Let’s get started. First, we need few information about an elderly person',
+    intro: 'Let’s get started. First, we need few information about an elderly person.',
     questions: [
       {
         id: 'basic-info',
@@ -78,8 +77,8 @@ export const steps = [
   },
   {
     id: 'emergency-contacts',
-    eyebrow: 'Emergency contacts',
-    title: 'Who should we reach out to when something needs attention?',
+    intro:
+      'That’s the profile sorted. Now — who should we reach out to when something needs attention?',
     questions: [
       {
         id: 'primary-contact',
@@ -133,8 +132,8 @@ export const steps = [
   },
   {
     id: 'caregiver-tasks',
-    eyebrow: 'Caregiver tasks',
-    title: 'Tell us what kind of help your loved one needs day to day',
+    intro:
+      'Good. Next, tell me what kind of help your loved one needs day to day — this is what shapes the caregiver’s routine.',
     questions: [
       {
         id: 'tasks',
@@ -219,8 +218,7 @@ export const steps = [
   },
   {
     id: 'health-condition',
-    eyebrow: 'Health condition',
-    title: 'A few health details so the caregiver comes prepared',
+    intro: 'Almost done. A few health details so the caregiver comes prepared.',
     questions: [
       {
         id: 'conditions',
