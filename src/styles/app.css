@@ -1684,20 +1684,30 @@ input {
 
 /* ---------- Locked (subscriber-only) region ---------- */
 
+/* clips the blur halo, which otherwise escapes as haze around the region */
 .locked-region {
   position: relative;
   min-height: 300px;
+  overflow: hidden;
 }
 
+/* The content used to be clipped hard at 300px and then blurred, which left a
+   sliced edge with a soft halo around it. Now it fades out with a mask before it
+   reaches the clip, and the negative margin puts the blur halo in the padding so
+   the side clip lands on evenly blurred pixels instead of a seam. */
 .locked-content {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-3);
   max-height: 300px;
+  margin: 0 -14px;
+  padding: 0 14px;
   overflow: hidden;
   filter: blur(3.5px);
   pointer-events: none;
   user-select: none;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 40%, transparent 95%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 40%, transparent 95%);
 }
 
 /* white gradient sits on top: readable-ish at the very top so the shape of the
@@ -1715,8 +1725,8 @@ input {
   background: linear-gradient(
     180deg,
     rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.72) 20%,
-    var(--surface-elevated) 42%
+    rgba(255, 255, 255, 0.6) 45%,
+    var(--surface-elevated) 72%
   );
 }
 
