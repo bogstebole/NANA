@@ -19,6 +19,7 @@ behind the other views so switching away never loses its progress, and `answers`
 lives in `App` so the profile reads the same data the assistant collected — no
 second source of truth.
 
+- **Chat** — selecting it unfolds the thread list: **New chat**, the current conversation, and past ones. Starting a new chat files the current one away first, but only if it produced a plan, so untouched threads don't clutter the history. A past thread opens read only — what the chat concluded (summary, the facts it collected, anything said afterwards) rather than a replay of the questionnaire.
 - **Dashboard** — every caregiver request and where it stands: accepted, waiting, or declined. A decline always carries the reason, so the user is never left guessing. Empty until they've actually contacted someone.
 - **Care plans** — the live plan plus archived ones, newest first.
 - **Profile** — account details and everything the questionnaire collected, editable back in the chat.

@@ -1087,6 +1087,113 @@ input {
   font-weight: var(--font-medium);
 }
 
+/* ---------- Chat thread list ---------- */
+
+.nav-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 2px 0 6px;
+  padding-left: var(--spacing-3);
+  border-left: 1px solid var(--border-subtle);
+  margin-left: var(--spacing-4);
+}
+
+.nav-sub-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  padding: 6px var(--spacing-2);
+  border-radius: var(--radius-lg);
+  text-align: left;
+  color: var(--text-secondary);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.nav-sub-item:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.nav-sub-item.is-active {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.nav-sub-item.is-new {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  color: var(--primary-highlight);
+  font-weight: var(--font-medium);
+}
+
+.nav-sub-item.is-new:hover {
+  background: var(--primary-subtle);
+  color: var(--primary-highlight);
+}
+
+.nav-sub-item.is-new svg {
+  flex-shrink: 0;
+}
+
+.nav-sub-label {
+  font-size: var(--text-xs-size);
+  line-height: var(--text-xs-leading);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-sub-item.is-active .nav-sub-label {
+  font-weight: var(--font-medium);
+}
+
+.nav-sub-date {
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--text-disabled);
+}
+
+.nav-sub-item.is-new span {
+  font-size: var(--text-xs-size);
+  line-height: var(--text-xs-leading);
+}
+
+/* ---------- Archived thread ---------- */
+
+.doc.is-static {
+  cursor: default;
+}
+
+.doc.is-static:hover {
+  border-color: transparent;
+  box-shadow: var(--shadow-card);
+  transform: none;
+}
+
+.archived-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  width: 100%;
+  padding: var(--spacing-2-5) var(--spacing-3);
+  border-radius: var(--radius-2xl);
+  background: var(--surface-2);
+  font-size: var(--text-xs-size);
+  line-height: var(--text-xs-leading);
+  color: var(--text-secondary);
+}
+
+.archived-bar svg {
+  flex-shrink: 0;
+}
+
+.archived-bar .btn {
+  margin-left: auto;
+}
+
 .nav-badge {
   margin-left: auto;
   min-width: 18px;

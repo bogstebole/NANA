@@ -1,18 +1,30 @@
-import { FileText, LayoutDashboard, MessageSquare, RotateCcw, Settings, User } from 'lucide-react';
+import {
+  FileText,
+  LayoutDashboard,
+  MessageSquare,
+  Plus,
+  RotateCcw,
+  Settings,
+  User,
+} from 'lucide-react';
 import Logo from './Logo';
-
-const ITEMS = [
-  { id: 'chat', label: 'Chat', icon: MessageSquare },
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'plans', label: 'Care plans', icon: FileText },
-];
 
 const FOOTER_ITEMS = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
-export default function AppNav({ view, onView, user, badge, onRestart }) {
+export default function AppNav({
+  view,
+  onView,
+  user,
+  badge,
+  threads,
+  activeThread,
+  onSelectThread,
+  onNewChat,
+  onRestart,
+}) {
   const initials =
     user.name
       .split(' ')
@@ -42,7 +54,40 @@ export default function AppNav({ view, onView, user, badge, onRestart }) {
         <Logo width={110} />
       </div>
 
-      <div className="nav-group">{ITEMS.map(item)}</div>
+      <div className="nav-group">
+        {item({ id: 'chat', label: 'Chat', icon: MessageSquare })}
+
+        {/* the thread list only unfolds while the chat is the current view */}
+        {view === 'chat' && (
+          <div className="nav-sub">
+            <button type="button" className="nav-sub-item is-new" onClick={onNewChat}>
+              <Plus size={14} strokeWidth={2} />
+              <span>New chat</span>
+            </button>
+            <button
+              type="button"
+              className={`nav-sub-item${activeThread === 'live' ? ' is-active' : ''}`}
+              onClick={() => onSelectThread('live')}
+            >
+              <span className="nav-sub-label">Current chat</span>
+            </button>
+            {threads.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className={`nav-sub-item${activeThread === t.id ? ' is-active' : ''}`}
+                onClick={() => onSelectThread(t.id)}
+              >
+                <span className="nav-sub-label">{t.title}</span>
+                <span className="nav-sub-date">{t.date}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {item({ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard })}
+        {item({ id: 'plans', label: 'Care plans', icon: FileText })}
+      </div>
 
       <div className="nav-group nav-group-end">
         {FOOTER_ITEMS.map(item)}
