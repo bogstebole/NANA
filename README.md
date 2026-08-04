@@ -45,10 +45,10 @@ artifacts, and the composer at the bottom is the only persistent control.
    - No Continue button and no step titles — the composer is the only persistent control
    - The composer is disabled until the questions are done, then accepts free-text messages
 
-A finished section folds down to ~two rows under a gradient with a **See all answers**
-toggle — but only from `FOLDABLE_FROM` rows up. The toggle costs about as much height
-as a collapsed row, so folding a three-row section measured 232px → 216px while hiding
-content; below the threshold the section simply stays open.
+A finished section folds down to a single summary row — the answer count and the
+question titles — from `FOLDABLE_FROM` rows up. It started as a peek at the list
+under a gradient, but that cost more height than the answers it revealed: a folded
+section measured 172px against 68px for the summary row.
 3. **Care plan** — once everything is answered the assistant posts the plan as a chat
    artifact: a grey container holding a white document, with a summary and fact grid
    generated from the actual answers, plus the top matches.

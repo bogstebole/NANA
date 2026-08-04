@@ -169,11 +169,6 @@ input {
   width: 100%;
 }
 
-.answers-wrap {
-  position: relative;
-  width: 100%;
-}
-
 /* negative margin + matching padding keeps the card shadows out of the clip */
 .answers {
   display: flex;
@@ -181,23 +176,51 @@ input {
   gap: var(--spacing-3);
   margin: 0 -8px;
   padding: 0 8px;
-  overflow: hidden;
 }
 
-/* reaches full opacity only at the very bottom, so the second row keeps fading
-   out behind it instead of leaving a band of empty grey above the toggle */
-.answers-fade {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  background: linear-gradient(
-    180deg,
-    rgba(245, 245, 245, 0) 0%,
-    rgba(245, 245, 245, 0.85) 55%,
-    var(--surface-2) 100%
-  );
+/* the whole folded section: one row instead of a peek at the list */
+.answers-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  width: 100%;
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-2xl);
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-card);
+  text-align: left;
+  transition: box-shadow 0.15s ease;
+}
+
+.answers-summary:hover {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.09), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.answers-summary-count {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: var(--font-medium);
+  color: var(--text-secondary);
+}
+
+.answers-summary-list {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-xs-size);
+  line-height: var(--text-xs-leading);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.answers-summary-chevron {
+  flex-shrink: 0;
+  color: var(--text-disabled);
 }
 
 .answers-toggle {
