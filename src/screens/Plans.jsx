@@ -1,4 +1,4 @@
-import { ArrowUpRight, FileText, Sparkles } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import Button from '../components/Button';
 import AskAssistant from '../components/AskAssistant';
 
@@ -28,9 +28,11 @@ export default function Plans({ entries, onOpenPlan, onGoToChat, onAskAssistant 
       )}
 
       <div className="view-list">
+        {/* the whole row is the target — the arrow on hover is the only affordance
+            it needs, so there is no button competing with it */}
         {entries.map((e) => (
           <div
-            className="plan-row is-clickable"
+            className="plan-row"
             key={e.id}
             role="button"
             tabIndex={0}
@@ -42,43 +44,19 @@ export default function Plans({ entries, onOpenPlan, onGoToChat, onAskAssistant 
               }
             }}
           >
-            <span className="locked-badge">
-              <FileText size={14} strokeWidth={2} />
-            </span>
-            <div className="cg-main">
-              <div className="cg-top">
-                <span className="cg-name">{e.title}</span>
-                {/* the assistant opens against this plan, right where its title is */}
-                <button
-                  type="button"
-                  className="inline-ask"
-                  onClick={(ev) => {
-                    ev.stopPropagation();
-                    onAskAssistant();
-                  }}
-                  aria-label={`Ask the assistant about the ${e.date} plan`}
-                >
-                  <Sparkles size={12} strokeWidth={2} />
-                  Ask
-                </button>
+            <div className="plan-row-main">
+              <div className="plan-row-top">
+                <span className="plan-row-title">{e.title}</span>
                 <span className={`status-pill is-${e.archived ? 'muted' : 'accepted'}`}>
                   {e.status}
                 </span>
+                <ArrowUpRight size={14} strokeWidth={2} className="plan-row-go" aria-hidden="true" />
               </div>
-              <div className="cg-meta">
+              <p className="plan-row-meta">
                 {e.date} · {e.caregiverCount} caregivers
-              </div>
-              <p className="booking-detail">{e.summary}</p>
+              </p>
+              <p className="plan-row-summary">{e.summary}</p>
             </div>
-            <Button
-              variant="secondary"
-              onClick={(ev) => {
-                ev.stopPropagation();
-                onOpenPlan(e.id);
-              }}
-            >
-              Open <ArrowUpRight size={12} strokeWidth={2} />
-            </Button>
           </div>
         ))}
       </div>
