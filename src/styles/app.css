@@ -1664,22 +1664,31 @@ input {
   padding: 0 var(--spacing-4);
 }
 
+/* no flex gap: the spacing lives inside each slot's animated width as padding,
+   so it shrinks away with the item instead of vanishing in one frame */
 .photo-carousel .rail {
   display: flex;
-  gap: var(--spacing-2);
   width: 100%;
   overflow: hidden;
 }
 
+/* the gap is subtracted inside the mask rather than added as padding on the slot:
+   with border-box a padded slot can never be narrower than its padding, so the
+   leaving item stuck at 8px and that 8px collapsed the moment it unmounted */
 .photo-carousel .slot {
-  position: relative;
   height: 190px;
   flex-shrink: 0;
+}
+
+.photo-carousel .slot-mask {
+  position: relative;
+  width: calc(100% - 8px);
+  height: 100%;
   border-radius: var(--radius-3xl);
   overflow: hidden;
 }
 
-.photo-carousel .slot img {
+.photo-carousel .slot-mask img {
   position: absolute;
   top: 0;
   left: 50%;

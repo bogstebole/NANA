@@ -7,12 +7,19 @@ import photo4 from '../assets/photo4.jpg';
 
 // Material 3 multi-browse carousel, auto-advancing.
 // Slot widths come straight from the Figma layout (sum + 3×8px gap = 448px).
-// An item enters small on the right, grows into the hero, then shrinks away left.
+// An item enters small on the right, becomes the hero, then shrinks away left.
 const SLOT_WIDTHS = [36.67, 126.67, 190, 70.67];
 const HERO_WIDTH = 190;
+const GAP = 8;
 const PHOTOS = [photo1, photo2, photo3, photo4];
 
-export default function PhotoCarousel({ interval = 2800 }) {
+// A fixed duration matters: with a spring the exit finished out of step with the
+// resize of its neighbours, so the rail lurched when the item unmounted.
+const DURATION = 0.85;
+// Material 3 "emphasized" easing.
+const EASE = [0.2, 0, 0, 1];
+
+export default function PhotoCarousel({ interval = 3200 }) {
   const [offset, setOffset] = useState(0);
 
   useEffect(() => {
@@ -33,13 +40,18 @@ export default function PhotoCarousel({ interval = 2800 }) {
               <motion.div
                 key={position}
                 className="slot"
-                initial={{ width: 0, opacity: 0 }}
-                animate={{ width, opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 190, damping: 28 }}
+                // the gap is carried inside the animated width, so an item that
+                // has shrunk to nothing occupies nothing — removing it can no
+                // longer collapse a leftover 8px and jolt the whole rail
+                initial={{ width: 0 }}
+                animate={{ width: width + GAP }}
+                exit={{ width: 0 }}
+                transition={{ duration: DURATION, ease: EASE }}
               >
                 {/* fixed-width image, so narrowing the slot crops instead of squashing */}
-                <img src={PHOTOS[position % PHOTOS.length]} alt="" style={{ width: HERO_WIDTH }} />
+                <div className="slot-mask">
+                  <img src={PHOTOS[position % PHOTOS.length]} alt="" style={{ width: HERO_WIDTH }} />
+                </div>
               </motion.div>
             );
           })}
