@@ -2278,3 +2278,102 @@ input {
   font-weight: var(--font-medium);
   box-shadow: var(--shadow-card);
 }
+
+/* one field on its own screen */
+.imm-single-field {
+  display: block;
+  width: 100%;
+  padding: var(--spacing-4);
+  border-radius: var(--radius-2xl);
+  background: rgba(255, 255, 255, 0.52);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: 0 8px 32px rgba(122, 92, 70, 0.08);
+  transition: border-color 0.25s ease, background 0.25s ease;
+  cursor: text;
+}
+
+.imm-single-field:focus-within {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(253, 155, 119, 0.7);
+}
+
+.imm-single-field input {
+  width: 100%;
+  font-size: 19px;
+  line-height: 28px;
+  text-align: center;
+  color: #463d35;
+  caret-color: var(--primary);
+}
+
+.imm-single-field input::placeholder {
+  color: #b3a496;
+}
+
+/* the care plan, shown without leaving the experience */
+.imm-screen.is-wide {
+  width: min(600px, 100%);
+}
+
+.imm-plan-summary {
+  margin-top: var(--spacing-3);
+  font-size: var(--text-sm-size);
+  line-height: 24px;
+  color: #6d6157;
+}
+
+.imm-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing-2);
+  width: 100%;
+  margin-top: var(--spacing-6);
+}
+
+.imm-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--spacing-2-5) var(--spacing-3);
+  border-radius: var(--radius-2xl);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  text-align: left;
+  min-width: 0;
+}
+
+.imm-fact-label {
+  font-size: 10px;
+  line-height: 14px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #a2917f;
+}
+
+.imm-fact-value {
+  font-size: var(--text-xs-size);
+  line-height: 17px;
+  font-weight: var(--font-medium);
+  color: #463d35;
+}
+
+.imm-plan-note {
+  margin-top: var(--spacing-6);
+  margin-bottom: var(--spacing-3);
+  font-size: var(--text-xs-size);
+  line-height: var(--text-xs-leading);
+  color: #8a7a6d;
+}
+
+.imm-option.is-static {
+  cursor: default;
+}
+
+.imm-option.is-static:hover {
+  background: rgba(255, 255, 255, 0.52);
+  transform: none;
+}

@@ -39,6 +39,16 @@ question rather than restarting.
 **Immersive** is a fullscreen take: one question at a time, long soft fade/scale
 transitions, glass cards over drifting clouds, with generative ambient audio.
 
+- Multi-field questions are split into **one field per screen**, each with its own
+  conversational prompt and hint (`src/data/prompts.js`) — the copy lives with the
+  immersive variant, the classic form keeps its shorter labels. The answer is only
+  committed once the last field is filled, so a half-finished question never counts
+  as answered in either variant. Selects stay as they are.
+- It does **not** close to reveal the result: the finished care plan is shown inside
+  the experience, and only then does **See the full plan** exit and land on that
+  plan's page — the dashboard stays empty until a caregiver is actually requested,
+  so it would be an anticlimax to land there.
+
 - **Clouds** — `src/components/immersive/CloudBackground.jsx`. A raw WebGL fragment
   shader, no libraries: domain-warped fbm noise over a pale golden-hour sky, drifting
   at 0.015× time. Rendered at 0.75× resolution and capped at 1.25 DPR — the clouds are

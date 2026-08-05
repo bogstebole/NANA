@@ -14,7 +14,6 @@ import CopilotPanel from './components/CopilotPanel';
 import PaywallModal from './components/PaywallModal';
 import PlanDetail from './screens/PlanDetail';
 import Immersive from './screens/Immersive';
-import { questions } from './data/flow';
 import { statusCounts } from './data/bookings';
 import { caregivers } from './data/carePlan';
 import { planEntries, seedThreads } from './data/threads';
@@ -106,11 +105,9 @@ export default function App() {
     setPlanListOpen(true);
   };
 
-  // The immersive variant is a fullscreen take on the same questionnaire, so it
-  // only makes sense while questions are still open; once they're all answered
-  // there is nothing for it to ask and we stay in the chat.
-  const questionnaireDone = questions.every((q) => answers[q.id]);
-  const showImmersive = phase === 'app' && variant === 'immersive' && !questionnaireDone;
+  // The immersive variant stays open past the last question: it shows the finished
+  // care plan itself, so the calm isn't broken just to reveal the result.
+  const showImmersive = phase === 'app' && variant === 'immersive';
 
   const startVariant = (next) => {
     setVariant(next);
@@ -300,7 +297,15 @@ export default function App() {
             user={user}
             answers={answers}
             onAnswer={onAnswer}
+            onPlan={onPlan}
             onExit={() => setVariant('classic')}
+            onFinish={() => {
+              // the plan they just read is the natural place to land: the dashboard
+              // is still empty until they actually request a caregiver
+              setVariant('classic');
+              setSelectedPlan('live');
+              setView('plan-detail');
+            }}
           />
         )}
       </AnimatePresence>
