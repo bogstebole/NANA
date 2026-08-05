@@ -13,6 +13,8 @@ import CaregiverSidebar from './components/CaregiverSidebar';
 import CopilotPanel from './components/CopilotPanel';
 import PaywallModal from './components/PaywallModal';
 import PlanDetail from './screens/PlanDetail';
+import Immersive from './screens/Immersive';
+import { questions } from './data/flow';
 import { statusCounts } from './data/bookings';
 import { caregivers } from './data/carePlan';
 import { planEntries, seedThreads } from './data/threads';
@@ -38,6 +40,7 @@ export default function App() {
   const [chatListOpen, setChatListOpen] = useState(true);
   const [planListOpen, setPlanListOpen] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState('live');
+  const [variant, setVariant] = useState('classic'); // classic | immersive
   const [run, setRun] = useState(0); // remounts the flow on restart
 
   const onPlan = useCallback((p) => setPlan(p), []);
@@ -58,6 +61,7 @@ export default function App() {
     setThreads(seedThreads);
     setActiveThread('live');
     setView('chat');
+    setVariant('classic');
     setRun((r) => r + 1);
     setPhase('register');
   };
@@ -102,6 +106,21 @@ export default function App() {
     setPlanListOpen(true);
   };
 
+  // The immersive variant is a fullscreen take on the same questionnaire, so it
+  // only makes sense while questions are still open; once they're all answered
+  // there is nothing for it to ask and we stay in the chat.
+  const questionnaireDone = questions.every((q) => answers[q.id]);
+  const showImmersive = phase === 'app' && variant === 'immersive' && !questionnaireDone;
+
+  const startVariant = (next) => {
+    setVariant(next);
+    if (next === 'immersive') {
+      setRightPanel(null);
+      setActiveThread('live');
+      setView('chat');
+    }
+  };
+
   const openThread = threads.find((t) => t.id === activeThread);
 
   const entries = planEntries({
@@ -142,6 +161,8 @@ export default function App() {
           onSelectPlan={openPlanPage}
           planListOpen={planListOpen}
           onTogglePlanList={() => setPlanListOpen((v) => !v)}
+          variant={variant}
+          onVariant={startVariant}
           onRestart={restart}
         />
       )}
@@ -268,6 +289,18 @@ export default function App() {
             plan={plan}
             unlocked={unlocked}
             onClose={() => setRightPanel(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showImmersive && (
+          <Immersive
+            key="immersive"
+            user={user}
+            answers={answers}
+            onAnswer={onAnswer}
+            onExit={() => setVariant('classic')}
           />
         )}
       </AnimatePresence>

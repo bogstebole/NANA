@@ -87,6 +87,8 @@ export default function AppNav({
   onSelectPlan,
   planListOpen,
   onTogglePlanList,
+  variant,
+  onVariant,
   onRestart,
 }) {
   const initials =
@@ -174,6 +176,29 @@ export default function AppNav({
       </div>
 
       <div className="nav-group nav-group-end">
+        {/* both questionnaire variants stay available — they write the same answers */}
+        <div className="nav-variant">
+          <span className="nav-variant-label">Questionnaire</span>
+          <div className="segmented" role="group" aria-label="Questionnaire variant">
+            <button
+              type="button"
+              className={variant === 'classic' ? 'is-active' : ''}
+              onClick={() => onVariant('classic')}
+              aria-pressed={variant === 'classic'}
+            >
+              Classic
+            </button>
+            <button
+              type="button"
+              className={variant === 'immersive' ? 'is-active' : ''}
+              onClick={() => onVariant('immersive')}
+              aria-pressed={variant === 'immersive'}
+            >
+              Immersive
+            </button>
+          </div>
+        </div>
+
         {FOOTER_ITEMS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}

@@ -29,6 +29,27 @@ The nav, statuses and screens are placeholder structure for the concept — mock
 lives in `src/data/bookings.js`, and status colours come from the Tailwind config
 scales, so replacing them with the real design is a styling job, not a rewrite.
 
+## Questionnaire variants
+
+The nav carries a **Classic / Immersive** switch. Both ask the same questions and
+write into the same `answers` in `App`, so you can switch mid-flow: answers given in
+one show up in the other, and the immersive variant resumes at the first unanswered
+question rather than restarting.
+
+**Immersive** is a fullscreen take: one question at a time, long soft fade/scale
+transitions, glass cards over drifting clouds, with generative ambient audio.
+
+- **Clouds** — `src/components/immersive/CloudBackground.jsx`. A raw WebGL fragment
+  shader, no libraries: domain-warped fbm noise over a pale golden-hour sky, drifting
+  at 0.015× time. Rendered at 0.75× resolution and capped at 1.25 DPR — the clouds are
+  soft, so the upscale costs nothing visually. Falls back to a CSS sky gradient if
+  WebGL or shader compilation is unavailable.
+- **Audio** — `src/lib/zenAudio.js`. Web Audio only, no files and nothing to license:
+  a detuned sine drone, band-passed noise for air, and pentatonic tones blooming on a
+  loose random timer, so it never loops audibly. Starts from a click, so autoplay
+  policies are satisfied. Mute is in the top-right.
+- Honours `prefers-reduced-motion`: the clouds render one frame and hold.
+
 ## Flow
 
 The questionnaire itself is framed as an AI chat. There is no wizard footer — the
