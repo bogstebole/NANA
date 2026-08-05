@@ -10,21 +10,39 @@ import Button from '../components/Button';
 
 const letterFor = (i) => String.fromCharCode(97 + i);
 
-// Long, soft cross-fades — the pacing is the point of this variant.
-const screenMotion = {
-  initial: { opacity: 0, scale: 0.975, y: 18 },
-  animate: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 0.61, 0.36, 1] } },
-  exit: { opacity: 0, scale: 1.015, y: -14, transition: { duration: 0.45, ease: [0.55, 0.06, 0.68, 0.19] } },
+const EASE_OUT = [0.22, 0.61, 0.36, 1];
+const EASE_IN = [0.55, 0.06, 0.68, 0.19];
+
+// The screen orchestrates: its pieces arrive one after another, and on the way out
+// they leave in reverse — the last thing you looked at is the first to go.
+const screen = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { staggerChildren: 0.065, delayChildren: 0.05 } },
+  exit: { opacity: 0, transition: { staggerChildren: 0.035, staggerDirection: -1 } },
+};
+
+const piece = {
+  initial: { opacity: 0, y: 20, scale: 0.985 },
+  animate: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.55, ease: EASE_OUT } },
+  exit: { opacity: 0, y: -12, scale: 1.01, transition: { duration: 0.3, ease: EASE_IN } },
+};
+
+// a list is a piece that in turn staggers its own children
+const list = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1, transition: { staggerChildren: 0.055 } },
+  exit: { opacity: 0, transition: { staggerChildren: 0.03, staggerDirection: -1 } },
 };
 
 function SingleQ({ question, onCommit }) {
   const [picked, setPicked] = useState(null);
   return (
-    <div className="imm-options">
+    <motion.div className="imm-options" variants={list}>
       {question.options.map((opt, i) => (
-        <button
+        <motion.button
           key={opt.id}
           type="button"
+          variants={piece}
           className={`imm-option${picked === opt.id ? ' is-selected' : ''}`}
           onClick={() => {
             if (picked) return;
@@ -37,9 +55,9 @@ function SingleQ({ question, onCommit }) {
             <span className="imm-option-title">{opt.title}</span>
             {opt.description && <span className="imm-option-desc">{opt.description}</span>}
           </span>
-        </button>
+        </motion.button>
       ))}
-    </div>
+    </motion.div>
   );
 }
 
@@ -49,11 +67,12 @@ function MultiQ({ question, onCommit }) {
     setIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   return (
     <>
-      <div className="imm-options">
+      <motion.div className="imm-options" variants={list}>
         {question.options.map((opt, i) => (
-          <button
+          <motion.button
             key={opt.id}
             type="button"
+            variants={piece}
             className={`imm-option${ids.includes(opt.id) ? ' is-selected' : ''}`}
             onClick={() => toggle(opt.id)}
           >
@@ -62,52 +81,52 @@ function MultiQ({ question, onCommit }) {
               <span className="imm-option-title">{opt.title}</span>
               {opt.description && <span className="imm-option-desc">{opt.description}</span>}
             </span>
-          </button>
+          </motion.button>
         ))}
-      </div>
-      <div className="imm-actions">
+      </motion.div>
+      <motion.div className="imm-actions" variants={piece}>
         <Button variant="primary" size="lg" disabled={ids.length === 0} onClick={() => onCommit({ optionIds: ids })}>
           Continue
         </Button>
-      </div>
+      </motion.div>
     </>
   );
 }
 
 // One field on its own screen — the reason the immersive variant reads as a
 // conversation rather than a form.
-function FieldQ({ screen, initial, onCommit }) {
+function FieldQ({ item, initial, onCommit }) {
   const [value, setValue] = useState(initial || '');
   const ref = useRef(null);
-  const optional = !!screen.field.optional;
+  const optional = !!item.field.optional;
   const ready = optional || value.trim().length > 0;
 
   useEffect(() => {
     const t = setTimeout(() => ref.current?.focus({ preventScroll: true }), 700);
     return () => clearTimeout(t);
-  }, [screen.id]);
+  }, [item.id]);
 
   const commit = () => ready && onCommit(value.trim());
 
   return (
     <>
-      <label className="imm-single-field">
+      <motion.label className="imm-single-field" variants={piece}>
         <input
           ref={ref}
           type="text"
-          placeholder={FIELD_PLACEHOLDERS[screen.field.id] || screen.field.placeholder}
+          placeholder={FIELD_PLACEHOLDERS[item.field.id] || item.field.placeholder}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') commit();
           }}
         />
-      </label>
-      <div className="imm-actions">
+      </motion.label>
+      <motion.div className="imm-actions" variants={piece}>
         <Button variant="primary" size="lg" disabled={!ready} onClick={commit}>
           {optional && !value.trim() ? 'Skip' : 'Continue'}
         </Button>
-      </div>
+      </motion.div>
     </>
   );
 }
@@ -168,10 +187,7 @@ export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onF
     return () => clearTimeout(t);
   }, [stage]);
 
-  const plan = useMemo(
-    () => (stage === 'plan' ? buildPlan(answers) : null),
-    [stage, answers]
-  );
+  const plan = useMemo(() => (stage === 'plan' ? buildPlan(answers) : null), [stage, answers]);
 
   // make sure the app has the plan before the user can be redirected to it
   useEffect(() => {
@@ -192,16 +208,21 @@ export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onF
     advance(idx);
   };
 
-  const commitField = (screen, value) => {
-    const draft = { ...(drafts[screen.questionId] || {}), [screen.field.id]: value };
-    setDrafts((d) => ({ ...d, [screen.questionId]: draft }));
-    if (screen.isLast) onAnswer(screen.questionId, { values: draft });
+  const commitField = (item, value) => {
+    const draft = { ...(drafts[item.questionId] || {}), [item.field.id]: value };
+    setDrafts((d) => ({ ...d, [item.questionId]: draft }));
+    if (item.isLast) onAnswer(item.questionId, { values: draft });
     advance(idx);
   };
 
-  const answeredCount = askable.filter(isAnswered).length;
+  const current = sequence[idx];
+  // Counted by position in the flow, not by committed answers: a four-field question
+  // commits once, so counting answers left the number frozen for four screens then
+  // jumping by four.
+  const position = current ? askable.findIndex((s) => s.id === current.id) : -1;
   const total = askable.length;
-  const screen = sequence[idx];
+  const progress = stage === 'asking' ? Math.max(0, position) / total : 1;
+
   const firstName = user.name.split(' ')[0];
   const preview = caregivers.slice(0, 2);
 
@@ -215,11 +236,13 @@ export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onF
       <CloudBackground />
 
       <div className="imm-chrome">
-        <div className="imm-progress" role="progressbar" aria-valuenow={answeredCount} aria-valuemax={total}>
-          <div
-            className="imm-progress-fill"
-            style={{ width: `${stage === 'asking' ? (answeredCount / total) * 100 : 100}%` }}
-          />
+        <div
+          className="imm-progress"
+          role="progressbar"
+          aria-valuenow={Math.max(0, position)}
+          aria-valuemax={total}
+        >
+          <div className="imm-progress-fill" style={{ width: `${progress * 100}%` }} />
         </div>
         <div className="imm-ctls">
           <button
@@ -243,34 +266,40 @@ export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onF
       <div className="imm-stage">
         <AnimatePresence mode="wait">
           {stage === 'breath' && (
-            <motion.div key="breath" className="imm-screen" {...screenMotion}>
-              <p className="imm-intro-text">
+            <motion.div key="breath" className="imm-screen" variants={screen} initial="initial" animate="animate" exit="exit">
+              <motion.p className="imm-intro-text" variants={piece}>
                 That’s everything, {firstName}. Take a breath — I’m putting the plan together.
-              </p>
+              </motion.p>
             </motion.div>
           )}
 
           {stage === 'plan' && plan && (
-            <motion.div key="plan" className="imm-screen is-wide" {...screenMotion}>
-              <p className="imm-count">Your care plan</p>
-              <h1 className="imm-title">Here’s the plan for {plan.firstName}</h1>
-              <p className="imm-plan-summary">{plan.summary}</p>
+            <motion.div key="plan" className="imm-screen is-wide" variants={screen} initial="initial" animate="animate" exit="exit">
+              <motion.p className="imm-count" variants={piece}>
+                Your care plan
+              </motion.p>
+              <motion.h1 className="imm-title" variants={piece}>
+                Here’s the plan for {plan.firstName}
+              </motion.h1>
+              <motion.p className="imm-plan-summary" variants={piece}>
+                {plan.summary}
+              </motion.p>
 
-              <div className="imm-facts">
+              <motion.div className="imm-facts" variants={list}>
                 {plan.facts.map((f) => (
-                  <div className="imm-fact" key={f.label}>
+                  <motion.div className="imm-fact" key={f.label} variants={piece}>
                     <span className="imm-fact-label">{f.label}</span>
                     <span className="imm-fact-value">{f.value}</span>
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
 
-              <p className="imm-plan-note">
+              <motion.p className="imm-plan-note" variants={piece}>
                 {caregivers.length} caregivers matched — here are the two closest fits.
-              </p>
-              <div className="imm-options">
+              </motion.p>
+              <motion.div className="imm-options" variants={list}>
                 {preview.map((c) => (
-                  <div className="imm-option is-static" key={c.id}>
+                  <motion.div className="imm-option is-static" key={c.id} variants={piece}>
                     <span className="imm-letter">{c.initials}</span>
                     <span className="imm-option-text">
                       <span className="imm-option-title">{c.name}</span>
@@ -278,56 +307,66 @@ export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onF
                         {c.match}% match · {c.years} yrs · {c.rate} · {c.area}
                       </span>
                     </span>
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
 
-              <div className="imm-actions">
+              <motion.div className="imm-actions" variants={piece}>
                 <Button variant="primary" size="lg" onClick={onFinish}>
                   See the full plan <ArrowUpRight size={14} strokeWidth={2} />
                 </Button>
-              </div>
+              </motion.div>
             </motion.div>
           )}
 
-          {stage === 'asking' && screen?.type === 'intro' && (
-            <motion.div key={screen.id} className="imm-screen" {...screenMotion}>
-              <p className="imm-intro-text">{screen.text}</p>
-              <div className="imm-actions">
+          {stage === 'asking' && current?.type === 'intro' && (
+            <motion.div key={current.id} className="imm-screen" variants={screen} initial="initial" animate="animate" exit="exit">
+              <motion.p className="imm-intro-text" variants={piece}>
+                {current.text}
+              </motion.p>
+              <motion.div className="imm-actions" variants={piece}>
                 <Button variant="primary" size="lg" onClick={() => advance(idx)}>
                   Continue
                 </Button>
-              </div>
+              </motion.div>
             </motion.div>
           )}
 
-          {stage === 'asking' && screen?.type === 'field' && (
-            <motion.div key={screen.id} className="imm-screen" {...screenMotion}>
-              <p className="imm-count">
-                {answeredCount + 1} of {total}
-              </p>
-              <h1 className="imm-title">{FIELD_PROMPTS[screen.field.id] || screen.field.label}</h1>
-              <p className="imm-subtitle">{FIELD_HINTS[screen.field.id] || ''}</p>
+          {stage === 'asking' && current?.type === 'field' && (
+            <motion.div key={current.id} className="imm-screen" variants={screen} initial="initial" animate="animate" exit="exit">
+              <motion.p className="imm-count" variants={piece}>
+                {position + 1} of {total}
+              </motion.p>
+              <motion.h1 className="imm-title" variants={piece}>
+                {FIELD_PROMPTS[current.field.id] || current.field.label}
+              </motion.h1>
+              <motion.p className="imm-subtitle" variants={piece}>
+                {FIELD_HINTS[current.field.id] || ''}
+              </motion.p>
               <FieldQ
-                screen={screen}
-                initial={drafts[screen.questionId]?.[screen.field.id]}
-                onCommit={(v) => commitField(screen, v)}
+                item={current}
+                initial={drafts[current.questionId]?.[current.field.id]}
+                onCommit={(v) => commitField(current, v)}
               />
             </motion.div>
           )}
 
-          {stage === 'asking' && screen?.type === 'question' && (
-            <motion.div key={screen.id} className="imm-screen" {...screenMotion}>
-              <p className="imm-count">
-                {answeredCount + 1} of {total}
-              </p>
-              <h1 className="imm-title">{screen.question.title}</h1>
-              <p className="imm-subtitle">{screen.question.subtitle}</p>
-              {screen.question.type === 'single' && (
-                <SingleQ question={screen.question} onCommit={(a) => commitQuestion(screen.id, a)} />
+          {stage === 'asking' && current?.type === 'question' && (
+            <motion.div key={current.id} className="imm-screen" variants={screen} initial="initial" animate="animate" exit="exit">
+              <motion.p className="imm-count" variants={piece}>
+                {position + 1} of {total}
+              </motion.p>
+              <motion.h1 className="imm-title" variants={piece}>
+                {current.question.title}
+              </motion.h1>
+              <motion.p className="imm-subtitle" variants={piece}>
+                {current.question.subtitle}
+              </motion.p>
+              {current.question.type === 'single' && (
+                <SingleQ question={current.question} onCommit={(a) => commitQuestion(current.id, a)} />
               )}
-              {screen.question.type === 'multi' && (
-                <MultiQ question={screen.question} onCommit={(a) => commitQuestion(screen.id, a)} />
+              {current.question.type === 'multi' && (
+                <MultiQ question={current.question} onCommit={(a) => commitQuestion(current.id, a)} />
               )}
             </motion.div>
           )}

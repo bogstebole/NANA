@@ -36,8 +36,15 @@ write into the same `answers` in `App`, so you can switch mid-flow: answers give
 one show up in the other, and the immersive variant resumes at the first unanswered
 question rather than restarting.
 
-**Immersive** is a fullscreen take: one question at a time, long soft fade/scale
-transitions, glass cards over drifting clouds, with generative ambient audio.
+**Immersive** is a fullscreen take: one question at a time, glass cards over drifting
+clouds, with generative ambient audio.
+
+- Transitions are **staggered in both directions**: the outgoing screen unwinds from
+  the bottom up (`staggerDirection: -1`), the incoming one builds from the top down,
+  option lists staggering their own rows inside that. About 1.1s end to end.
+- The counter tracks **position in the flow**, not committed answers — a four-field
+  question commits once, so counting answers left the number frozen for four screens
+  and then jumping by four.
 
 - Multi-field questions are split into **one field per screen**, each with its own
   conversational prompt and hint (`src/data/prompts.js`) — the copy lives with the
