@@ -29,6 +29,31 @@ The nav, statuses and screens are placeholder structure for the concept — mock
 lives in `src/data/bookings.js`, and status colours come from the Tailwind config
 scales, so replacing them with the real design is a styling job, not a rewrite.
 
+## Question content
+
+The questions come from the client's "Conversation Flow AI" document. It is not a flat
+form — it is an assessment that branches:
+
+1. **Getting to know you** — who the care is for, who is calling, household, home condition.
+2. **Daily life** — eight questions that establish how they move, manage and have changed.
+3. **Frailty assessment** — the flow's pivot. `src/data/frailty.js` estimates a level on
+   the Clinical Frailty Scale (1–9) from those answers, and the assistant states it before
+   asking anything else. Shown as a card in the chat and a full screen in the immersive
+   variant. It is labelled an estimate, not a diagnosis.
+4. **Support** — *branches on the level*. 1–3 asks about lifestyle and prevention, 4–5 about
+   the housework, 6 about hands-on personal care, 7–8 about bed mobility, eating, pressure
+   sores and breathing support, 9 about palliative needs. `when({ band, level })` on a
+   question makes it conditional; `applicableQuestions()` resolves the list.
+5. **Reason for contact** — what brought them, how it started, hospital stay, and what a
+   good outcome looks like for the family.
+
+The recommendation follows the document's formula — frailty 50%, reason for contact 35%,
+context 15% (`WEIGHTS` in `frailty.js`) — and the first moves per reason come straight from
+its scenarios.
+
+Copy is in English to match the rest of the prototype and the Figma design; the source
+document is Serbian. Every string lives in `src/data/flow.js`, so switching is a data edit.
+
 ## Questionnaire variants
 
 The nav carries a **Classic / Immersive** switch. Both ask the same questions and

@@ -5,46 +5,40 @@ import { buildPlan } from './carePlan';
 export const seedThreads = [
   {
     id: 'may',
-    title: 'Moving the visits to afternoons',
+    title: 'After the fall in May',
     date: '12 May 2026',
     summary:
-      'Milica needed daytime visits three days a week, mainly with meals and companionship. We matched 4 caregivers in and around Vračar.',
+      'Milica had fallen twice and was struggling with the stairs. We arranged a nurse assessment first, then a caregiver four mornings a week.',
     caregivers: 4,
     answers: {
-      'basic-info': {
-        values: {
-          name: 'Milica Stevanović',
-          dob: '04-08-1941',
-          address: 'Južni bulevar 12, Beograd',
-          phone: '+381 63 555 210',
-        },
+      'about-person': {
+        values: { name: 'Milica Stevanović', age: '84', city: 'Vračar, Beograd' },
       },
-      'care-schedule': { optionId: 'daily' },
-      'care-days': { optionIds: ['mon', 'wed', 'fri'] },
-      'care-time': { optionIds: ['afternoon'] },
-      'primary-contact': {
+      'about-you': {
         values: {
-          'contact-name': 'Bogdan Stevanović',
+          'your-name': 'Bogdan Stevanović',
           relation: 'Son',
-          'contact-phone': '+381 63 555 210',
+          'your-phone': '+381 63 555 210',
         },
       },
-      'contact-preference': { optionId: 'emergencies' },
-      'doctor-info': {
-        values: {
-          'doctor-name': 'Dr Jovana Perić',
-          clinic: 'Dom zdravlja Vračar',
-          'doctor-phone': '+381 11 344 2100',
-        },
+      household: { optionId: 'alone' },
+      'home-condition': { optionId: 'mostly-fine' },
+      mobility: { optionId: 'stick' },
+      'going-out': { optionId: 'little-help' },
+      'daily-help': { optionId: 'occasional' },
+      'self-care': { optionIds: ['dressing', 'toilet', 'medication'] },
+      falls: { optionId: 'more-than-once' },
+      outdoors: { optionId: 'weekly' },
+      slowing: { optionId: 'little' },
+      overall: { optionId: 'house-help' },
+      'household-tasks': { optionIds: ['cooking', 'shopping', 'cleaning'] },
+      'who-helps-now': { optionId: 'family' },
+      'reason-for-contact': { optionId: 'fall' },
+      onset: { optionId: 'sudden' },
+      hospitalisation: { optionId: 'none' },
+      'family-goal': {
+        values: { goal: 'That she can stay in her own flat', worry: 'Another fall while I’m at work' },
       },
-      tasks: { optionIds: ['meals', 'companionship'] },
-      mobility: { optionId: 'some-support' },
-      routine: {
-        values: { 'morning-routine': 'Lunch around 13:00, short walk after', habits: 'Afternoon nap' },
-      },
-      conditions: { optionIds: ['pressure'] },
-      'medication-handling': { optionId: 'reminders' },
-      allergies: { values: { 'allergy-list': 'None known', diet: 'Low salt' } },
     },
     messages: [
       { role: 'user', text: 'Can we move the visits to the afternoon instead?' },
@@ -59,43 +53,37 @@ export const seedThreads = [
     title: 'After the hospital discharge',
     date: '3 February 2026',
     summary:
-      'First plan after Milica came home. Daily check-ins while she recovered, with medication given by the caregiver and help with meals.',
+      'First plan after Milica came home from hospital. A nurse for the first week, then daily caregiver visits while she regained her strength.',
     caregivers: 3,
     answers: {
-      'basic-info': {
-        values: {
-          name: 'Milica Stevanović',
-          dob: '04-08-1941',
-          address: 'Južni bulevar 12, Beograd',
-          phone: '+381 63 555 210',
-        },
+      'about-person': {
+        values: { name: 'Milica Stevanović', age: '83', city: 'Vračar, Beograd' },
       },
-      'care-schedule': { optionId: 'occasional' },
-      'care-days': { optionIds: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] },
-      'care-time': { optionIds: ['morning'] },
-      'primary-contact': {
+      'about-you': {
         values: {
-          'contact-name': 'Bogdan Stevanović',
+          'your-name': 'Bogdan Stevanović',
           relation: 'Son',
-          'contact-phone': '+381 63 555 210',
+          'your-phone': '+381 63 555 210',
         },
       },
-      'contact-preference': { optionId: 'all-updates' },
-      'doctor-info': {
-        values: {
-          'doctor-name': 'Dr Jovana Perić',
-          clinic: 'Dom zdravlja Vračar',
-          'doctor-phone': '+381 11 344 2100',
-        },
+      household: { optionId: 'alone' },
+      'home-condition': { optionId: 'needs-help' },
+      mobility: { optionId: 'walker' },
+      'going-out': { optionId: 'never-out' },
+      'daily-help': { optionId: 'several-times' },
+      'self-care': { optionIds: ['toilet'] },
+      falls: { optionId: 'once' },
+      outdoors: { optionId: 'never' },
+      slowing: { optionId: 'lot' },
+      overall: { optionId: 'most-help' },
+      'personal-care': { optionIds: ['bathing', 'dressing', 'transfer'] },
+      'fall-risk': { optionId: 'high' },
+      'reason-for-contact': { optionId: 'discharge' },
+      onset: { optionId: 'sudden' },
+      hospitalisation: { optionId: 'recent' },
+      'family-goal': {
+        values: { goal: 'That she gets back on her feet at home', worry: 'That she gives up trying' },
       },
-      tasks: { optionIds: ['personal-care', 'meals', 'medication'] },
-      mobility: { optionId: 'bedridden' },
-      routine: {
-        values: { 'morning-routine': 'Dressing change, breakfast at 9', habits: 'Goes to bed early' },
-      },
-      conditions: { optionIds: ['pressure'] },
-      'medication-handling': { optionId: 'administered' },
-      allergies: { values: { 'allergy-list': 'Penicillin', diet: 'Soft food' } },
     },
     messages: [
       { role: 'user', text: 'How soon can someone start?' },
@@ -127,7 +115,7 @@ export function planEntries({ plan, threads, caregiverCount, today }) {
   const past = threads.map((t) => ({
     id: t.id,
     plan: buildPlan(t.answers),
-    title: `Care plan for ${t.answers['basic-info']?.values?.name ?? 'your loved one'}`,
+    title: `Care plan for ${t.answers['about-person']?.values?.name ?? 'your loved one'}`,
     date: t.date,
     status: 'Archived',
     summary: t.summary,

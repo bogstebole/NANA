@@ -36,9 +36,9 @@ function Section({ title, rows, onEdit }) {
 }
 
 export default function Profile({ user, answers, onGoToChat, onAskAssistant }) {
-  const elderly = fieldsOf('basic-info', answers);
-  const contact = fieldsOf('primary-contact', answers);
-  const doctor = fieldsOf('doctor-info', answers);
+  const elderly = fieldsOf('about-person', answers);
+  const contact = fieldsOf('about-you', answers);
+  const goal = fieldsOf('family-goal', answers);
 
   return (
     <div className="view">
@@ -62,9 +62,9 @@ export default function Profile({ user, answers, onGoToChat, onAskAssistant }) {
         <>
           <Section title="Care recipient" rows={elderly} onEdit={onGoToChat} />
           {contact.length > 0 && (
-            <Section title="Emergency contact" rows={contact} onEdit={onGoToChat} />
+            <Section title="Main contact" rows={contact} onEdit={onGoToChat} />
           )}
-          {doctor.length > 0 && <Section title="Doctor" rows={doctor} onEdit={onGoToChat} />}
+          {goal.length > 0 && <Section title="What you’re hoping for" rows={goal} onEdit={onGoToChat} />}
         </>
       ) : (
         <div className="empty">

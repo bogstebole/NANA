@@ -17,6 +17,7 @@ const contentMotion = {
 // conversation has moved past it, it folds down to a single summary row.
 export default function QuestionSection({
   step,
+  questions,
   answers,
   activeIndex,
   collapsible,
@@ -27,7 +28,9 @@ export default function QuestionSection({
   const [expanded, setExpanded] = useState(false);
   const folded = collapsible && !expanded;
 
-  const summary = step.questions.map((q) => q.shortTitle).join(' · ');
+  // the caller filters by frailty band, so a section only ever shows what applies
+  const items = questions ?? step.questions;
+  const summary = items.map((q) => q.shortTitle).join(' · ');
 
   return (
     <LayoutGroup id={step.id}>
@@ -45,13 +48,13 @@ export default function QuestionSection({
               onClick={() => setExpanded(true)}
               {...contentMotion}
             >
-              <span className="answers-summary-count">{step.questions.length} answers</span>
+              <span className="answers-summary-count">{items.length} answers</span>
               <span className="answers-summary-list">{summary}</span>
               <ChevronDown size={14} strokeWidth={1.75} className="answers-summary-chevron" />
             </motion.button>
           ) : (
             <motion.div key="list" layout="position" className="answers" {...contentMotion}>
-              {step.questions.map((q, i) => (
+              {items.map((q, i) => (
                 <QuestionItem
                   key={q.id}
                   question={q}

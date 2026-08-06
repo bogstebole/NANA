@@ -1,4 +1,5 @@
 import { optionTitles } from './flow';
+import { frailtyOf } from './frailty';
 
 // Matched caregivers. `match` is the fake relevance score the assistant "computed"
 // from the questionnaire — it exists to sell the AI framing in the prototype.
@@ -139,37 +140,129 @@ export const equipment = [
   },
 ];
 
-const listOr = (items, fallback) => (items.length ? items.join(', ').toLowerCase() : fallback);
 
-// Builds the care plan intro from what the user actually answered, so the
-// artifact visibly reflects the questionnaire.
+// The document's scenarios: what gets arranged depends far more on why the family
+// called than on the frailty level alone. Each entry is a coordinator's first move.
+const REASON_ACTIONS = {
+  fall: [
+    'A nurse visit to assess the fall and check for injury',
+    'A home fall-risk assessment',
+    'A physiotherapist, then a caregiver once she is steadier',
+  ],
+  memory: [
+    'A cognitive screening with a neuropsychiatrist',
+    'A caregiver experienced with dementia',
+    'A safety check of the flat — hob, locks, keys',
+  ],
+  discharge: [
+    'A nurse for the first week after discharge',
+    'Medication reconciliation against the discharge letter',
+    'Daily caregiver visits while she regains strength',
+  ],
+  loneliness: [
+    'A companion caregiver on a regular rhythm',
+    'Getting her out to a local social group',
+    'Transport so visits stop depending on the family',
+  ],
+  medication: [
+    'A medication review with the GP',
+    'A weekly organiser prepared by the caregiver',
+    'Reminder visits at the times that matter',
+  ],
+  diagnosis: [
+    'A caregiver with experience of this condition',
+    'Coordination with the treating specialist',
+    'Equipment suited to how the condition progresses',
+  ],
+  'home-help': [
+    'A caregiver for cooking, laundry and shopping',
+    'A deeper clean to reset the flat',
+    'A regular weekly rhythm so it does not slip again',
+  ],
+  respite: [
+    'A caregiver covering the hours you need back',
+    'Cover arranged for a longer break',
+    'A single coordinator so you stop managing it',
+  ],
+  'daily-living': [
+    'A caregiver for the parts of the day that are hardest',
+    'Help with meals and medication',
+    'A weekly check-in call with you',
+  ],
+};
+
+// What the frailty level itself calls for, before the reason is layered on.
+const BAND_ACTIONS = {
+  light: 'Light-touch support — company, transport and keeping her active.',
+  moderate: 'Regular caregiver visits for the house, meals and errands.',
+  high: 'Hands-on personal care, with fall prevention as the priority.',
+  severe: 'Nursing-level care. A caregiver alone would not be enough here.',
+  palliative: 'Palliative coordination — nursing, medication delivery and family support.',
+};
+
+// Option titles read fine on a card but not mid-sentence: "it came on it's been
+// this way a long time". These are the same answers, phrased to be quoted.
+const ONSET_PHRASE = {
+  sudden: 'and it came on suddenly',
+  gradual: 'and it has come on gradually',
+  'long-standing': 'and it has been this way a long time',
+};
+
+const CAREGIVER_ROLE = {
+  light: 'companion',
+  moderate: 'caregiver',
+  high: 'experienced caregiver',
+  severe: 'nurse alongside a caregiver',
+  palliative: 'palliative team',
+};
+
+// Builds the care plan from what the user actually answered, so the artifact
+// visibly reflects the questionnaire — and follows the client's formula:
+// decision = frailty (50%) + reason for contact (35%) + context (15%).
 export function buildPlan(answers) {
-  const name = answers['basic-info']?.values?.name?.trim() || 'your loved one';
+  const name = answers['about-person']?.values?.name?.trim() || 'your loved one';
   const firstName = name.split(' ')[0];
-  const schedule = optionTitles('care-schedule', answers['care-schedule']);
-  const days = optionTitles('care-days', answers['care-days']);
-  const times = optionTitles('care-time', answers['care-time']);
-  const tasks = optionTitles('tasks', answers['tasks']);
-  const mobility = optionTitles('mobility', answers['mobility']);
-  const conditions = optionTitles('conditions', answers['conditions']);
+  const frailty = frailtyOf(answers);
+  const band = frailty?.band ?? 'moderate';
+
+  const reasonId = answers['reason-for-contact']?.optionId;
+  const reason = optionTitles('reason-for-contact', answers['reason-for-contact'])[0];
+  const onsetId = answers['onset']?.optionId;
+  const onset = optionTitles('onset', answers['onset'])[0];
+  const hospital = optionTitles('hospitalisation', answers['hospitalisation'])[0];
+  const mobility = optionTitles('mobility', answers['mobility'])[0];
+  const dailyHelp = optionTitles('daily-help', answers['daily-help'])[0];
+  const goal = answers['family-goal']?.values?.goal?.trim();
+
+  const actions = REASON_ACTIONS[reasonId] || REASON_ACTIONS['daily-living'];
 
   const summary =
-    `Based on everything you shared, ${firstName} needs ${listOr(schedule, 'regular support')} ` +
-    `on ${days.length ? `${days.length} days a week` : 'a schedule you set'}, mainly with ` +
-    `${listOr(tasks, 'day-to-day support')}. We matched ${caregivers.length} caregivers in your area ` +
-    `who have worked with exactly this combination before.`;
+    `${firstName} looks like level ${frailty?.level ?? '—'} on the frailty scale — ` +
+    `${(frailty?.label ?? 'assessed').toLowerCase()}. ${BAND_ACTIONS[band]} ` +
+    (reason ? `You came to us because ${reason.toLowerCase()}` : '') +
+    (reason && ONSET_PHRASE[onsetId] ? `, ${ONSET_PHRASE[onsetId]}. ` : reason ? '. ' : '') +
+    `We matched ${caregivers.length} people who fit that picture.`;
 
   const facts = [
     { label: 'Care for', value: name },
-    { label: 'Schedule', value: schedule[0] || '—' },
-    { label: 'Days', value: days.length ? `${days.length} per week` : '—' },
-    { label: 'Time of day', value: times.join(', ') || '—' },
-    { label: 'Mobility', value: mobility[0] || '—' },
-    {
-      label: 'Conditions',
-      value: conditions.filter((c) => c !== 'None of these').join(', ') || 'None reported',
-    },
+    { label: 'Frailty level', value: frailty ? `${frailty.level} · ${frailty.label}` : '—' },
+    { label: 'Getting around', value: mobility || '—' },
+    { label: 'Help needed', value: dailyHelp || '—' },
+    { label: 'Reason for contact', value: reason || '—' },
+    { label: 'How it started', value: onset || '—' },
+    { label: 'Hospital stay', value: hospital || '—' },
   ];
 
-  return { name, firstName, summary, facts };
+  return {
+    name,
+    firstName,
+    summary,
+    facts,
+    frailty,
+    band,
+    reason,
+    goal,
+    actions,
+    role: CAREGIVER_ROLE[band],
+  };
 }

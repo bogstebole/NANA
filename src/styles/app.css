@@ -2377,3 +2377,73 @@ input {
   background: rgba(255, 255, 255, 0.52);
   transform: none;
 }
+
+/* ---------- Frailty scale ---------- */
+
+.cfs-scale {
+  display: flex;
+  gap: 4px;
+  margin-top: var(--spacing-2);
+}
+
+.cfs-step {
+  flex: 1;
+  padding: 6px 0;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-disabled);
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.cfs-step.is-passed {
+  background: var(--color-primary-100);
+  color: var(--color-primary-600);
+}
+
+.cfs-step.is-current {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: var(--font-medium);
+}
+
+.cfs-note {
+  margin-top: var(--spacing-2);
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-disabled);
+}
+
+/* the same scale, inside the immersive variant */
+.imm-cfs {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  margin-top: var(--spacing-4);
+}
+
+.imm-cfs-step {
+  flex: 1;
+  padding: 10px 0;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  color: #a2917f;
+  font-size: var(--text-xs-size);
+  line-height: 16px;
+  text-align: center;
+}
+
+.imm-cfs-step.is-passed {
+  background: rgba(255, 244, 238, 0.75);
+  color: var(--color-primary-600);
+}
+
+.imm-cfs-step.is-current {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: var(--font-medium);
+}

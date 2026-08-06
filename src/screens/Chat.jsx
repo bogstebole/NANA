@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { steps } from '../data/flow';
+import { applicableQuestions, flowContext, steps } from '../data/flow';
+import { frailtyOf } from '../data/frailty';
 import { buildPlan } from '../data/carePlan';
 import QuestionSection, { FOLDABLE_FROM } from '../components/QuestionSection';
 import CarePlanCard from '../components/CarePlanCard';
+import FrailtyCard from '../components/FrailtyCard';
 import ChatInput from '../components/ChatInput';
 
 const REPLIES = {
@@ -56,14 +58,22 @@ export default function Chat({
   const scrollRef = useRef(null);
   const replyIndex = useRef(0);
 
+  // The frailty level decides which questions the next section even asks, so it is
+  // recomputed from the answers rather than stored.
+  const frailty = frailtyOf(answers);
+  const ctx = flowContext(answers, frailty?.level);
+  const questionsFor = (step) => applicableQuestions(step, ctx);
+  const planName =
+    answers['about-person']?.values?.name?.trim().split(' ')[0] || 'your loved one';
+
   const currentStep = steps[revealed - 1];
-  const currentDone = currentStep?.questions.every((q) => answers[q.id]) ?? false;
+  const currentDone = currentStep ? questionsFor(currentStep).every((q) => answers[q.id]) : false;
 
   // Only one question is ever active. An explicit edit wins; otherwise it is the
   // first unanswered question, which can only be in the step still in progress.
   const activeIndexFor = (step) => {
     if (editing) return editing.stepId === step.id ? editing.index : null;
-    const i = step.questions.findIndex((q) => !answers[q.id]);
+    const i = questionsFor(step).findIndex((q) => !answers[q.id]);
     return i === -1 ? null : i;
   };
 
@@ -136,25 +146,37 @@ export default function Chat({
 
           {steps.slice(0, revealed).map((step, si) => {
             const activeIndex = activeIndexFor(step);
-            const complete = step.questions.every((q) => answers[q.id]);
+            const stepQuestions = questionsFor(step);
+            const complete = stepQuestions.length > 0 && stepQuestions.every((q) => answers[q.id]);
             // a section folds away once the conversation has moved past it, but only
             // when it is long enough for folding to actually save room
             const collapsible =
               complete &&
               activeIndex === null &&
               (si < revealed - 1 || planReady) &&
-              step.questions.length >= FOLDABLE_FROM;
+              stepQuestions.length >= FOLDABLE_FROM;
             return (
               <motion.div className="chat-message" key={step.id} {...messageMotion}>
                 <p className="assistant-text">{step.intro}</p>
                 <QuestionSection
                   step={step}
+                  questions={stepQuestions}
                   answers={answers}
                   activeIndex={activeIndex}
                   collapsible={collapsible}
                   onCommit={commit}
                   onEdit={(index) => setEditing({ stepId: step.id, index })}
                 />
+
+                {/* the pivot of the client's flow: state the level, then branch on it */}
+                {step.id === 'daily-life' && complete && frailty && (
+                  <>
+                    <p className="assistant-text">
+                      From everything you’ve told me, here’s where {planName} sits today.
+                    </p>
+                    <FrailtyCard frailty={frailty} name={planName} />
+                  </>
+                )}
               </motion.div>
             );
           })}

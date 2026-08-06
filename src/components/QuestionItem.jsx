@@ -121,10 +121,10 @@ function ActiveBody({ question, answer, onCommit }) {
       <div className="card-footer">
         <Button
           variant="secondary"
-          disabled={draftIds.length === 0}
+          disabled={!question.allowEmpty && draftIds.length === 0}
           onClick={() => onCommit({ optionIds: draftIds })}
         >
-          Next
+          {question.allowEmpty && draftIds.length === 0 ? 'None of these' : 'Next'}
         </Button>
       </div>
     </>

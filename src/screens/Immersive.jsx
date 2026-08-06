@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowUpRight, LayoutList, Volume2, VolumeX } from 'lucide-react';
-import { steps } from '../data/flow';
+import { applicableQuestions, flowContext, steps } from '../data/flow';
+import { frailtyOf } from '../data/frailty';
 import { FIELD_HINTS, FIELD_PLACEHOLDERS, FIELD_PROMPTS } from '../data/prompts';
 import { buildPlan, caregivers } from '../data/carePlan';
 import CloudBackground from '../components/immersive/CloudBackground';
@@ -85,8 +86,13 @@ function MultiQ({ question, onCommit }) {
         ))}
       </motion.div>
       <motion.div className="imm-actions" variants={piece}>
-        <Button variant="primary" size="lg" disabled={ids.length === 0} onClick={() => onCommit({ optionIds: ids })}>
-          Continue
+        <Button
+          variant="primary"
+          size="lg"
+          disabled={!question.allowEmpty && ids.length === 0}
+          onClick={() => onCommit({ optionIds: ids })}
+        >
+          {question.allowEmpty && ids.length === 0 ? 'None of these' : 'Continue'}
         </Button>
       </motion.div>
     </>
@@ -134,11 +140,18 @@ function FieldQ({ item, initial, onCommit }) {
 // The immersive questionnaire: one question at a time over slowly drifting clouds,
 // with generative ambient audio, ending on the care plan without leaving the calm.
 export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onFinish }) {
+  // Branching means the sequence itself depends on the answers so far, so it is
+  // rebuilt as the frailty estimate firms up rather than fixed on mount.
+  const frailty = frailtyOf(answers);
+  const ctx = flowContext(answers, frailty?.level);
+
   const sequence = useMemo(() => {
     const seq = [];
     steps.forEach((step) => {
+      const qs = applicableQuestions(step, ctx);
+      if (!qs.length) return;
       seq.push({ type: 'intro', id: `intro-${step.id}`, text: step.intro });
-      step.questions.forEach((q) => {
+      qs.forEach((q) => {
         if (q.type === 'inputs') {
           // each field becomes its own screen; the answer is only committed once
           // the last one is filled, so a half-finished question never counts as done
@@ -156,15 +169,22 @@ export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onF
           seq.push({ type: 'question', id: q.id, question: q });
         }
       });
+      // the pivot of the client's flow: state the level before branching on it
+      if (step.id === 'daily-life' && ctx.level) {
+        seq.push({ type: 'frailty', id: 'frailty-reveal' });
+      }
     });
     return seq;
-  }, []);
+  }, [ctx.band, ctx.level]);
 
-  const askable = useMemo(() => sequence.filter((s) => s.type !== 'intro'), [sequence]);
+  const isAskable = (s) => s.type === 'question' || s.type === 'field';
+  const askable = useMemo(() => sequence.filter(isAskable), [sequence]);
   const isAnswered = (s) => !!answers[s.type === 'field' ? s.questionId : s.id];
 
   const [idx, setIdx] = useState(() => {
-    const firstOpen = sequence.findIndex((s) => s.type !== 'intro' && !answers[s.type === 'field' ? s.questionId : s.id]);
+    const firstOpen = sequence.findIndex(
+      (s) => (s.type === 'question' || s.type === 'field') && !answers[s.type === 'field' ? s.questionId : s.id]
+    );
     if (firstOpen === -1) return -1;
     return sequence[firstOpen - 1]?.type === 'intro' ? firstOpen - 1 : firstOpen;
   });
@@ -196,7 +216,7 @@ export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onF
 
   const advance = (from) => {
     let next = from + 1;
-    while (next < sequence.length && sequence[next].type !== 'intro' && isAnswered(sequence[next])) {
+    while (next < sequence.length && isAskable(sequence[next]) && isAnswered(sequence[next])) {
       next += 1;
     }
     if (next >= sequence.length) setStage('breath');
@@ -215,7 +235,12 @@ export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onF
     advance(idx);
   };
 
-  const current = sequence[idx];
+  // branching rewrites the sequence, so an index can go stale — fall back rather
+  // than render nothing
+  const current =
+    sequence[idx] ??
+    sequence.find((s) => isAskable(s) && !isAnswered(s)) ??
+    sequence[sequence.length - 1];
   // Counted by position in the flow, not by committed answers: a four-field question
   // commits once, so counting answers left the number frozen for four screens then
   // jumping by four.
@@ -314,6 +339,38 @@ export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onF
               <motion.div className="imm-actions" variants={piece}>
                 <Button variant="primary" size="lg" onClick={onFinish}>
                   See the full plan <ArrowUpRight size={14} strokeWidth={2} />
+                </Button>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {stage === 'asking' && current?.type === 'frailty' && frailty && (
+            <motion.div key="frailty" className="imm-screen" variants={screen} initial="initial" animate="animate" exit="exit">
+              <motion.p className="imm-count" variants={piece}>
+                Frailty assessment
+              </motion.p>
+              <motion.h1 className="imm-title" variants={piece}>
+                Level {frailty.level} — {frailty.label}
+              </motion.h1>
+              <motion.p className="imm-subtitle" variants={piece}>
+                {frailty.blurb}
+              </motion.p>
+              <motion.div className="imm-cfs" variants={list}>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((l) => (
+                  <motion.span
+                    key={l}
+                    variants={piece}
+                    className={`imm-cfs-step${l === frailty.level ? ' is-current' : ''}${
+                      l < frailty.level ? ' is-passed' : ''
+                    }`}
+                  >
+                    {l}
+                  </motion.span>
+                ))}
+              </motion.div>
+              <motion.div className="imm-actions" variants={piece}>
+                <Button variant="primary" size="lg" onClick={() => advance(idx)}>
+                  Continue
                 </Button>
               </motion.div>
             </motion.div>
