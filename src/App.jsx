@@ -14,6 +14,7 @@ import CopilotPanel from './components/CopilotPanel';
 import PaywallModal from './components/PaywallModal';
 import PlanDetail from './screens/PlanDetail';
 import Immersive from './screens/Immersive';
+import { reconcile } from './data/dependencies';
 import { statusCounts } from './data/bookings';
 import { caregivers } from './data/carePlan';
 import { planEntries, seedThreads } from './data/threads';
@@ -43,8 +44,12 @@ export default function App() {
   const [run, setRun] = useState(0); // remounts the flow on restart
 
   const onPlan = useCallback((p) => setPlan(p), []);
+  // Answers are reconciled, not just merged: a changed frailty level retires the
+  // branch questions it no longer asks, so the state can never hold an answer to a
+  // question this user is not being asked. Both variants go through here.
   const onAnswer = useCallback(
-    (questionId, answer) => setAnswers((a) => ({ ...a, [questionId]: answer })),
+    (questionId, answer) =>
+      setAnswers((a) => reconcile(a, { ...a, [questionId]: answer }).answers),
     []
   );
   const selectCaregiver = useCallback((c) => setPaywall({ caregiver: c }), []);

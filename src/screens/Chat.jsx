@@ -2,11 +2,21 @@ import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { applicableQuestions, flowContext, steps } from '../data/flow';
 import { frailtyOf } from '../data/frailty';
+import { reconcile } from '../data/dependencies';
 import { buildPlan } from '../data/carePlan';
 import QuestionSection, { FOLDABLE_FROM } from '../components/QuestionSection';
 import CarePlanCard from '../components/CarePlanCard';
 import FrailtyCard from '../components/FrailtyCard';
+import ReviewCard from '../components/ReviewCard';
+import FlowChangeNotice from '../components/FlowChangeNotice';
 import ChatInput from '../components/ChatInput';
+
+const STEP_TITLES = {
+  'getting-to-know': 'Getting to know you',
+  'daily-life': 'Daily life',
+  support: 'Support',
+  reason: 'Why you got in touch',
+};
 
 const REPLIES = {
   locked: [
@@ -52,8 +62,10 @@ export default function Chat({
 }) {
   const [editing, setEditing] = useState(null); // { stepId, index }
   const [revealed, setRevealed] = useState(1);
+  const [confirmed, setConfirmed] = useState(false); // the review was signed off
   const [planReady, setPlanReady] = useState(false);
   const [thinking, setThinking] = useState(false);
+  const [flowChange, setFlowChange] = useState(null); // an edit moved the frailty level
   const [chatLog, setChatLog] = useState([]);
   const scrollRef = useRef(null);
   const replyIndex = useRef(0);
@@ -69,6 +81,26 @@ export default function Chat({
   const currentStep = steps[revealed - 1];
   const currentDone = currentStep ? questionsFor(currentStep).every((q) => answers[q.id]) : false;
 
+  // Everything asked and answered — which an edit can undo, because a changed
+  // frailty level opens questions that were never asked before.
+  const allDone =
+    revealed >= steps.length && steps.every((s) => questionsFor(s).every((q) => answers[q.id]));
+  const reviewing = allDone && !confirmed;
+
+  // The notice belongs above the questions it reopened, not at the end of the
+  // thread — the user has to walk back up to them otherwise.
+  const noticeStepId = flowChange
+    ? steps.find((s) => questionsFor(s).some((q) => !answers[q.id]))?.id
+    : null;
+
+  const reviewGroups = steps
+    .map((s) => ({
+      id: s.id,
+      title: STEP_TITLES[s.id] || s.id,
+      questions: questionsFor(s).filter((q) => answers[q.id]),
+    }))
+    .filter((g) => g.questions.length);
+
   // Only one question is ever active. An explicit edit wins; otherwise it is the
   // first unanswered question, which can only be in the step still in progress.
   const activeIndexFor = (step) => {
@@ -78,26 +110,47 @@ export default function Chat({
   };
 
   const commit = (questionId, answer) => {
+    // App prunes the answers; the same pure function tells us what it pruned so the
+    // thread can say so out loud instead of silently dropping work the user did.
+    // Only an edit is news. While the questionnaire is still running forward the
+    // estimate moves with every answer and the branch questions simply appear —
+    // there is nothing to warn about until something the user gave gets dropped.
+    const result = reconcile(answers, { ...answers, [questionId]: answer });
+    setFlowChange(result.dropped.length ? result : null);
     onAnswer(questionId, answer);
     setEditing(null);
   };
 
-  // Finishing a step makes the assistant "think", then introduce the next one —
-  // and after the last step, post the care plan.
+  // Finishing a step makes the assistant "think", then introduce the next one.
   useEffect(() => {
-    if (!currentDone || editing) return;
-    if (revealed >= steps.length && planReady) return;
+    if (!currentDone || editing || revealed >= steps.length) return;
     setThinking(true);
-    const t = setTimeout(
-      () => {
-        setThinking(false);
-        if (revealed < steps.length) setRevealed((r) => r + 1);
-        else setPlanReady(true);
-      },
-      revealed < steps.length ? 1100 : 1600
-    );
+    const t = setTimeout(() => {
+      setThinking(false);
+      setRevealed((r) => r + 1);
+    }, 1100);
     return () => clearTimeout(t);
-  }, [currentDone, editing, revealed, planReady]);
+  }, [currentDone, editing, revealed]);
+
+  // Signing off on the review is what produces the plan.
+  useEffect(() => {
+    if (!confirmed || planReady) return;
+    setThinking(true);
+    const t = setTimeout(() => {
+      setThinking(false);
+      setPlanReady(true);
+    }, 1600);
+    return () => clearTimeout(t);
+  }, [confirmed, planReady]);
+
+  // An edit that reopened questions takes the sign-off with it — there is now
+  // something the user has not seen, so the plan cannot stand.
+  useEffect(() => {
+    if (!allDone && confirmed) {
+      setConfirmed(false);
+      setPlanReady(false);
+    }
+  }, [allDone, confirmed]);
 
   // Keep the plan in sync so editing an earlier answer updates the artifact.
   useEffect(() => {
@@ -110,7 +163,7 @@ export default function Chat({
       if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
     }, 120);
     return () => clearTimeout(t);
-  }, [revealed, thinking, planReady, chatLog.length]);
+  }, [revealed, thinking, planReady, reviewing, chatLog.length]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -120,6 +173,18 @@ export default function Chat({
     }, 420);
     return () => clearTimeout(t);
   }, [editing, revealed]);
+
+  // The review lists questions, not positions, so it has to find its way back into
+  // whichever section the question ended up in after branching.
+  const editFromReview = (question) => {
+    const step = steps.find((s) => questionsFor(s).some((q) => q.id === question.id));
+    if (!step) return;
+    setFlowChange(null);
+    setEditing({
+      stepId: step.id,
+      index: questionsFor(step).findIndex((q) => q.id === question.id),
+    });
+  };
 
   const send = (text) => {
     const id = Date.now();
@@ -153,10 +218,13 @@ export default function Chat({
             const collapsible =
               complete &&
               activeIndex === null &&
-              (si < revealed - 1 || planReady) &&
+              (si < revealed - 1 || reviewing || planReady) &&
               stepQuestions.length >= FOLDABLE_FROM;
             return (
               <motion.div className="chat-message" key={step.id} {...messageMotion}>
+                {flowChange && noticeStepId === step.id && (
+                  <FlowChangeNotice change={flowChange} name={planName} />
+                )}
                 <p className="assistant-text">{step.intro}</p>
                 <QuestionSection
                   step={step}
@@ -180,6 +248,35 @@ export default function Chat({
               </motion.div>
             );
           })}
+
+          {/* an edit that dropped answers without reopening any question has no
+              section to sit above, so it lands at the end of the thread */}
+          {flowChange && !noticeStepId && (
+            <motion.div className="chat-message" {...messageMotion}>
+              <FlowChangeNotice change={flowChange} name={planName} />
+            </motion.div>
+          )}
+
+          {/* Nothing is built until the user has seen everything they told us and
+              said it is right. */}
+          {reviewing && !thinking && !editing && (
+            <motion.div className="chat-message" {...messageMotion}>
+              <p className="assistant-text">
+                That’s all my questions. Before I put the plan together, let’s check I’ve got it
+                right.
+              </p>
+              <ReviewCard
+                groups={reviewGroups}
+                answers={answers}
+                name={planName}
+                onEdit={editFromReview}
+                onConfirm={() => {
+                  setFlowChange(null);
+                  setConfirmed(true);
+                }}
+              />
+            </motion.div>
+          )}
 
           {planReady && plan && (
             <motion.div className="chat-message" {...messageMotion}>

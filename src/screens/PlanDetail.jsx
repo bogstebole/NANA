@@ -24,7 +24,15 @@ export default function PlanDetail({ entry, unlocked, onBack, onSelectCaregiver,
       </div>
 
       <div className="panel-card">
-        <p className="doc-p">{entry.summary}</p>
+        {archived ? (
+          <p className="doc-p">{entry.summary}</p>
+        ) : (
+          plan.narrative.map((p, i) => (
+            <p className="doc-p" key={i}>
+              {p}
+            </p>
+          ))
+        )}
         <div className="facts">
           {plan.facts.map((f) => (
             <div className="fact" key={f.label}>

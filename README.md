@@ -54,6 +54,38 @@ its scenarios.
 Copy is in English to match the rest of the prototype and the Figma design; the source
 document is Serbian. Every string lives in `src/data/flow.js`, so switching is a data edit.
 
+## Review, and answers that carry other answers
+
+Nothing is built until the user has seen everything they said and confirmed it. After
+the last question the assistant posts a **review** — every answer, grouped by section,
+each editable — and only the confirm button produces the plan.
+
+The catch is that the answers are not independent. The eight daily-life answers feed the
+frailty estimate, the estimate picks the band, and the band decides which support
+questions exist at all. Changing one can retire answers already given and open questions
+never asked.
+
+`src/data/dependencies.js` is the single source of truth for that, and it is pure, so the
+warning shown *before* an edit and the pruning done *after* one cannot disagree:
+
+- `isLoadBearing(id)` — marks the rows the review flags with a link icon.
+- `dependentsOf(id, answers)` — what is currently riding on this answer. If it is not
+  empty, the review asks for confirmation and names exactly which follow-ups are at risk
+  before opening the editor.
+- `reconcile(prev, next)` — applied to **every** answer in `App`, so state can never hold
+  an answer to a question this user is not being asked. It returns what it dropped and
+  what is newly being asked, which is what the notice in the thread reports.
+
+The notice only appears when something was actually **dropped**. Running forward the
+estimate moves with every answer and branch questions simply appear — that is the flow
+working, not news, and an early version announced it on every single answer. It renders
+directly above the section holding the reopened questions rather than at the end of the
+thread, so the user isn't sent scrolling back up. Confirming the review is undone
+automatically if an edit reopens anything, because there is now something unseen.
+
+The immersive variant has the same three states as full screens — review, warning,
+"that changed things" — and returns to the review once the reopened questions are cleared.
+
 ## Questionnaire variants
 
 The nav carries a **Classic / Immersive** switch. Both ask the same questions and
@@ -112,20 +144,46 @@ A finished section folds down to a single summary row — the answer count and t
 question titles — from `FOLDABLE_FROM` rows up. It started as a peek at the list
 under a gradient, but that cost more height than the answers it revealed: a folded
 section measured 172px against 68px for the summary row.
-3. **Care plan** — once everything is answered the assistant posts the plan as a chat
-   artifact: a grey container holding a white document, with a summary and fact grid
+3. **Review** — everything they said, grouped and editable (see above)
+4. **Care plan** — once the review is confirmed the assistant posts the plan as a chat
+   artifact: a grey container holding a white document, with the narrative and fact grid
    generated from the actual answers, plus the top matches.
+
+## What the care plan is
+
+Shaped by the client's "Care Coordinator" document. The plan is written, not tabulated,
+and it is explicitly not a sales page — the client's note on generic "book now" buttons
+was *"ježim se od toga"*. Everything is built in `buildPlan()` in `src/data/carePlan.js`:
+
+1. **The narrative** — who they are and what they want, how it developed, who is around
+   them, the biggest risks right now, what matters to the family, and the recommendation.
+   Built sentence by sentence from the answers, following the paragraph in the document.
+   `risksOf()` names the risks the document names: medication, kitchen safety, isolation.
+2. **The coordinator's message** — a letter, addressed to the caller by first name and
+   signed by a named person, ending on "we'll go step by step, together". The
+   acknowledgement sentence is chosen per reason for contact, because the document's own
+   example named the specific hard thing rather than offering generic sympathy.
+3. **Recommendations** — each one a title, **why we're recommending this** for this person
+   specifically, who would do it, and soft actions ("Ask Jovana to arrange this", "Talk it
+   through first"). Never "book now".
+4. **Ask or adjust** — a free-text box, because the plan is a conversation the family can
+   push back on, not a document handed down.
+5. **Reaching the coordinator** — WhatsApp, phone, email. Never behind the paywall; the
+   paywall is on caregiver numbers, not on reaching us.
 
 ## Paywall
 
 The only thing sold is caregiver contact. Everything else in the plan — the summary,
 the full caregiver list, the doctor and equipment recommendations — is readable for free.
 
-- The chat card is a **preview**: summary, facts and the top 2 matches. The open
+- The chat card is a **preview**: narrative, facts and the top 2 matches. The open
   affordance is deliberate — an "Open ↗" pill in the header, a primary-coloured hover
   state on the whole card, and an explicit CTA.
-- Opening it reveals the **sidebar** with all caregivers in full detail plus both
-  recommendation sections, unmasked.
+- Opening it reveals the **sidebar**: the coordinator's letter, the caregiver
+  recommendation, the full caregiver list, and the ways to reach us.
+- The first recommendation is **open** — it is the emotional payload of the document and
+  the entry point into the caregiver flow. The three that follow (doctor, home changes,
+  what's nearby) sit behind the gradient with the rest of the upsell.
 - **Tapping a caregiver opens the paywall**, which asks for the user's own phone number
   (the introduction is made by SMS, so it doubles as lead capture) and then payment.
 - **Phone numbers are never sent to a locked client.** `caregiversFor(unlocked)` in
@@ -140,7 +198,8 @@ the full caregiver list, the doctor and equipment recommendations — is readabl
 
 - `src/styles/tokens.css` — Figma variables (primitives + semantic aliases)
 - `src/data/flow.js` — all step/question content; edit this to change copy or add questions
-- `src/data/carePlan.js` — caregivers, recommendations, and the summary built from the answers
+- `src/data/carePlan.js` — caregivers, the coordinator, and the whole plan built from the answers
+- `src/data/dependencies.js` — which answers carry other answers, and the pruning that follows
 - `src/components/` — Button, Chip, NumberIndicator, SelectCard, SelectInput, TextField, QuestionItem, ChatInput, CarePlanCard, CaregiverRow, CaregiverSidebar, PhotoCarousel, Logo
 - `src/screens/` — Register, Chat
 

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowUpRight, LayoutList, Volume2, VolumeX } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, LayoutList, Pencil, Volume2, VolumeX } from 'lucide-react';
 import { applicableQuestions, flowContext, steps } from '../data/flow';
 import { frailtyOf } from '../data/frailty';
+import { answerSummary, dependentsOf, isLoadBearing, reconcile } from '../data/dependencies';
 import { FIELD_HINTS, FIELD_PLACEHOLDERS, FIELD_PROMPTS } from '../data/prompts';
 import { buildPlan, caregivers } from '../data/carePlan';
 import CloudBackground from '../components/immersive/CloudBackground';
@@ -35,6 +36,48 @@ const list = {
   exit: { opacity: 0, transition: { staggerChildren: 0.03, staggerDirection: -1 } },
 };
 
+const isAskable = (s) => s.type === 'question' || s.type === 'field';
+const answeredIn = (answers) => (s) => !!answers[s.type === 'field' ? s.questionId : s.id];
+
+// The screens, in order, for a given set of answers. Branching means this depends on
+// the answers themselves, so it is a plain function rather than fixed state: a commit
+// can build the *next* sequence and decide where to go before React re-renders.
+function buildSequence(answers) {
+  const level = frailtyOf(answers)?.level;
+  const ctx = flowContext(answers, level);
+  const seq = [];
+
+  steps.forEach((step) => {
+    const qs = applicableQuestions(step, ctx);
+    if (!qs.length) return;
+    seq.push({ type: 'intro', id: `intro-${step.id}`, text: step.intro });
+    qs.forEach((q) => {
+      if (q.type === 'inputs') {
+        // each field becomes its own screen; the answer is only committed once the
+        // last one is filled, so a half-finished question never counts as answered
+        q.fields.forEach((field, fi) => {
+          seq.push({
+            type: 'field',
+            id: `${q.id}:${field.id}`,
+            questionId: q.id,
+            question: q,
+            field,
+            isLast: fi === q.fields.length - 1,
+          });
+        });
+      } else {
+        seq.push({ type: 'question', id: q.id, question: q });
+      }
+    });
+    // the pivot of the client's flow: state the level before branching on it
+    if (step.id === 'daily-life' && ctx.level) {
+      seq.push({ type: 'frailty', id: 'frailty-reveal' });
+    }
+  });
+
+  return seq;
+}
+
 function SingleQ({ question, onCommit }) {
   const [picked, setPicked] = useState(null);
   return (
@@ -62,8 +105,8 @@ function SingleQ({ question, onCommit }) {
   );
 }
 
-function MultiQ({ question, onCommit }) {
-  const [ids, setIds] = useState([]);
+function MultiQ({ question, initial, onCommit }) {
+  const [ids, setIds] = useState(() => [...(initial || [])]);
   const toggle = (id) =>
     setIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   return (
@@ -140,56 +183,25 @@ function FieldQ({ item, initial, onCommit }) {
 // The immersive questionnaire: one question at a time over slowly drifting clouds,
 // with generative ambient audio, ending on the care plan without leaving the calm.
 export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onFinish }) {
-  // Branching means the sequence itself depends on the answers so far, so it is
-  // rebuilt as the frailty estimate firms up rather than fixed on mount.
   const frailty = frailtyOf(answers);
-  const ctx = flowContext(answers, frailty?.level);
+  const sequence = useMemo(() => buildSequence(answers), [answers]);
 
-  const sequence = useMemo(() => {
-    const seq = [];
-    steps.forEach((step) => {
-      const qs = applicableQuestions(step, ctx);
-      if (!qs.length) return;
-      seq.push({ type: 'intro', id: `intro-${step.id}`, text: step.intro });
-      qs.forEach((q) => {
-        if (q.type === 'inputs') {
-          // each field becomes its own screen; the answer is only committed once
-          // the last one is filled, so a half-finished question never counts as done
-          q.fields.forEach((field, fi) => {
-            seq.push({
-              type: 'field',
-              id: `${q.id}:${field.id}`,
-              questionId: q.id,
-              question: q,
-              field,
-              isLast: fi === q.fields.length - 1,
-            });
-          });
-        } else {
-          seq.push({ type: 'question', id: q.id, question: q });
-        }
-      });
-      // the pivot of the client's flow: state the level before branching on it
-      if (step.id === 'daily-life' && ctx.level) {
-        seq.push({ type: 'frailty', id: 'frailty-reveal' });
-      }
-    });
-    return seq;
-  }, [ctx.band, ctx.level]);
-
-  const isAskable = (s) => s.type === 'question' || s.type === 'field';
+  const isAnswered = answeredIn(answers);
   const askable = useMemo(() => sequence.filter(isAskable), [sequence]);
-  const isAnswered = (s) => !!answers[s.type === 'field' ? s.questionId : s.id];
 
-  const [idx, setIdx] = useState(() => {
-    const firstOpen = sequence.findIndex(
-      (s) => (s.type === 'question' || s.type === 'field') && !answers[s.type === 'field' ? s.questionId : s.id]
-    );
-    if (firstOpen === -1) return -1;
-    return sequence[firstOpen - 1]?.type === 'intro' ? firstOpen - 1 : firstOpen;
+  // Position is tracked by screen id, not index: branching rebuilds the sequence
+  // underneath us and an index would silently point at a different question.
+  const [currentId, setCurrentId] = useState(() => {
+    const firstOpen = sequence.findIndex((s) => isAskable(s) && !isAnswered(s));
+    if (firstOpen === -1) return null;
+    const prev = sequence[firstOpen - 1];
+    return (prev?.type === 'intro' ? prev : sequence[firstOpen]).id;
   });
-  const [stage, setStage] = useState(idx === -1 ? 'breath' : 'asking');
+  const [stage, setStage] = useState(currentId ? 'asking' : 'review');
+  const [returning, setReturning] = useState(false); // came here from the review
+  const [flowChange, setFlowChange] = useState(null);
   const [drafts, setDrafts] = useState({});
+  const [confirmChange, setConfirmChange] = useState(null); // question awaiting confirmation
   const [muted, setMuted] = useState(false);
   const audioRef = useRef(null);
 
@@ -214,33 +226,87 @@ export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onF
     if (plan) onPlan(plan);
   }, [plan, onPlan]);
 
-  const advance = (from) => {
-    let next = from + 1;
-    while (next < sequence.length && isAskable(sequence[next]) && isAnswered(sequence[next])) {
-      next += 1;
+  const current =
+    sequence.find((s) => s.id === currentId) ??
+    sequence.find((s) => isAskable(s) && !isAnswered(s)) ??
+    sequence[sequence.length - 1];
+
+  // Where to go once an answer has landed, decided against the answers that answer
+  // produced rather than the ones on screen.
+  const settle = (nextAnswers, fromId) => {
+    const seq = buildSequence(nextAnswers);
+    const done = answeredIn(nextAnswers);
+
+    if (returning) {
+      // an edit may have opened questions that were never asked; clear those first,
+      // then go back to the review the user came from
+      const open = seq.find((s) => isAskable(s) && !done(s));
+      if (!open) {
+        setReturning(false);
+        setStage('review');
+        return;
+      }
+      setCurrentId(open.id);
+      setStage('asking');
+      return;
     }
-    if (next >= sequence.length) setStage('breath');
-    else setIdx(next);
+
+    let i = seq.findIndex((s) => s.id === fromId) + 1;
+    while (i < seq.length && isAskable(seq[i]) && done(seq[i])) i += 1;
+    if (i >= seq.length) setStage('review');
+    else setCurrentId(seq[i].id);
   };
 
   const commitQuestion = (questionId, answer) => {
+    const result = reconcile(answers, { ...answers, [questionId]: answer });
     onAnswer(questionId, answer);
-    advance(idx);
+    // Only an edit is news. Running forward, the estimate moves with every answer
+    // and the branch questions simply appear — nothing the user gave is lost.
+    if (result.dropped.length) {
+      setFlowChange(result);
+      setStage('notice');
+      return;
+    }
+    settle(result.answers, current.id);
   };
 
   const commitField = (item, value) => {
     const draft = { ...(drafts[item.questionId] || {}), [item.field.id]: value };
     setDrafts((d) => ({ ...d, [item.questionId]: draft }));
+    const next = item.isLast ? { ...answers, [item.questionId]: { values: draft } } : answers;
     if (item.isLast) onAnswer(item.questionId, { values: draft });
-    advance(idx);
+    settle(next, item.id);
   };
 
-  // branching rewrites the sequence, so an index can go stale — fall back rather
-  // than render nothing
-  const current =
-    sequence[idx] ??
-    sequence.find((s) => isAskable(s) && !isAnswered(s)) ??
-    sequence[sequence.length - 1];
+  // From the review back into a single answer. Load-bearing answers ask first.
+  const editAnswer = (question) => {
+    const target = sequence.find(
+      (s) => s.id === question.id || (s.type === 'field' && s.questionId === question.id)
+    );
+    if (!target) return;
+    setConfirmChange(null);
+    setFlowChange(null);
+    setReturning(true);
+    setCurrentId(target.id);
+    setStage('asking');
+  };
+
+  const requestEdit = (question) => {
+    if (!isLoadBearing(question.id) || !dependentsOf(question.id, answers).length) {
+      return editAnswer(question);
+    }
+    setConfirmChange(question);
+  };
+
+  const reviewGroups = steps
+    .map((step) => ({
+      id: step.id,
+      questions: applicableQuestions(step, flowContext(answers, frailty?.level)).filter(
+        (q) => answers[q.id]
+      ),
+    }))
+    .filter((g) => g.questions.length);
+
   // Counted by position in the flow, not by committed answers: a four-field question
   // commits once, so counting answers left the number frozen for four screens then
   // jumping by four.
@@ -249,6 +315,7 @@ export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onF
   const progress = stage === 'asking' ? Math.max(0, position) / total : 1;
 
   const firstName = user.name.split(' ')[0];
+  const planName = answers['about-person']?.values?.name?.trim().split(' ')[0] || 'them';
   const preview = caregivers.slice(0, 2);
 
   return (
@@ -290,6 +357,113 @@ export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onF
 
       <div className="imm-stage">
         <AnimatePresence mode="wait">
+          {/* Everything they told us, before anything is built from it. */}
+          {stage === 'review' && (
+            <motion.div key="review" className="imm-screen is-wide" variants={screen} initial="initial" animate="animate" exit="exit">
+              <motion.p className="imm-count" variants={piece}>
+                One last look
+              </motion.p>
+              <motion.h1 className="imm-title" variants={piece}>
+                Have I got this right?
+              </motion.h1>
+              <motion.p className="imm-subtitle" variants={piece}>
+                Everything you’ve told me about {planName}. Anything can still be changed.
+              </motion.p>
+
+              <motion.div className="imm-review" variants={list}>
+                {reviewGroups.flatMap((g) =>
+                  g.questions.map((q) => (
+                    <motion.button
+                      key={q.id}
+                      type="button"
+                      variants={piece}
+                      className="imm-review-row"
+                      onClick={() => requestEdit(q)}
+                    >
+                      <span className="imm-review-label">{q.shortTitle}</span>
+                      <span className="imm-review-value">
+                        {answerSummary(q, answers[q.id]).join(' · ')}
+                      </span>
+                      <Pencil size={13} strokeWidth={1.75} className="imm-review-pencil" />
+                    </motion.button>
+                  ))
+                )}
+              </motion.div>
+
+              <AnimatePresence>
+                {confirmChange && (
+                  <motion.div
+                    className="imm-warning"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                  >
+                    <AlertTriangle size={15} strokeWidth={2} />
+                    <div>
+                      <p className="imm-warning-title">
+                        “{confirmChange.shortTitle}” decides what I ask afterwards
+                      </p>
+                      <p className="imm-warning-note">
+                        Changing it can move {planName}’s frailty level, and{' '}
+                        {dependentsOf(confirmChange.id, answers).length} answer
+                        {dependentsOf(confirmChange.id, answers).length === 1 ? '' : 's'} you
+                        already gave would be replaced with different questions.
+                      </p>
+                      <div className="imm-warning-actions">
+                        <Button variant="primary" onClick={() => editAnswer(confirmChange)}>
+                          Change it anyway
+                        </Button>
+                        <Button variant="secondary" onClick={() => setConfirmChange(null)}>
+                          Leave it
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <motion.div className="imm-actions" variants={piece}>
+                <Button variant="primary" size="lg" onClick={() => setStage('breath')}>
+                  That’s all correct
+                </Button>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {/* An edit moved the level: say what changed before asking anything new. */}
+          {stage === 'notice' && flowChange && (
+            <motion.div key="notice" className="imm-screen" variants={screen} initial="initial" animate="animate" exit="exit">
+              <motion.p className="imm-count" variants={piece}>
+                That changed things
+              </motion.p>
+              <motion.h1 className="imm-title" variants={piece}>
+                {planName} now looks like level {flowChange.level}, not {flowChange.previousLevel}
+              </motion.h1>
+              <motion.p className="imm-subtitle" variants={piece}>
+                {flowChange.dropped.length > 0 &&
+                  `I've set aside what you told me about ${flowChange.dropped
+                    .map((q) => q.shortTitle.toLowerCase())
+                    .join(', ')}. `}
+                {flowChange.added.length > 0 &&
+                  `There ${flowChange.added.length === 1 ? 'is' : 'are'} ${
+                    flowChange.added.length
+                  } thing${flowChange.added.length === 1 ? '' : 's'} I need to ask instead.`}
+              </motion.p>
+              <motion.div className="imm-actions" variants={piece}>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  onClick={() => {
+                    setFlowChange(null);
+                    settle(answers, current?.id);
+                  }}
+                >
+                  Continue
+                </Button>
+              </motion.div>
+            </motion.div>
+          )}
+
           {stage === 'breath' && (
             <motion.div key="breath" className="imm-screen" variants={screen} initial="initial" animate="animate" exit="exit">
               <motion.p className="imm-intro-text" variants={piece}>
@@ -306,17 +480,22 @@ export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onF
               <motion.h1 className="imm-title" variants={piece}>
                 Here’s the plan for {plan.firstName}
               </motion.h1>
-              <motion.p className="imm-plan-summary" variants={piece}>
-                {plan.summary}
-              </motion.p>
 
-              <motion.div className="imm-facts" variants={list}>
-                {plan.facts.map((f) => (
-                  <motion.div className="imm-fact" key={f.label} variants={piece}>
-                    <span className="imm-fact-label">{f.label}</span>
-                    <span className="imm-fact-value">{f.value}</span>
-                  </motion.div>
-                ))}
+              {plan.narrative.map((p, i) => (
+                <motion.p className="imm-plan-summary" variants={piece} key={i}>
+                  {p}
+                </motion.p>
+              ))}
+
+              {/* the coordinator's message, the part the client cared most about */}
+              <motion.div className="imm-note" variants={piece}>
+                <p className="imm-note-greeting">{plan.letter.greeting}</p>
+                <p className="imm-note-body">
+                  {plan.letter.paragraphs[plan.letter.paragraphs.length - 1]}
+                </p>
+                <p className="imm-note-sign">
+                  — {plan.coordinator.name}, {plan.coordinator.role.toLowerCase()}
+                </p>
               </motion.div>
 
               <motion.p className="imm-plan-note" variants={piece}>
@@ -369,7 +548,7 @@ export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onF
                 ))}
               </motion.div>
               <motion.div className="imm-actions" variants={piece}>
-                <Button variant="primary" size="lg" onClick={() => advance(idx)}>
+                <Button variant="primary" size="lg" onClick={() => settle(answers, current.id)}>
                   Continue
                 </Button>
               </motion.div>
@@ -382,7 +561,7 @@ export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onF
                 {current.text}
               </motion.p>
               <motion.div className="imm-actions" variants={piece}>
-                <Button variant="primary" size="lg" onClick={() => advance(idx)}>
+                <Button variant="primary" size="lg" onClick={() => settle(answers, current.id)}>
                   Continue
                 </Button>
               </motion.div>
@@ -402,7 +581,10 @@ export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onF
               </motion.p>
               <FieldQ
                 item={current}
-                initial={drafts[current.questionId]?.[current.field.id]}
+                initial={
+                  drafts[current.questionId]?.[current.field.id] ??
+                  answers[current.questionId]?.values?.[current.field.id]
+                }
                 onCommit={(v) => commitField(current, v)}
               />
             </motion.div>
@@ -423,7 +605,11 @@ export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onF
                 <SingleQ question={current.question} onCommit={(a) => commitQuestion(current.id, a)} />
               )}
               {current.question.type === 'multi' && (
-                <MultiQ question={current.question} onCommit={(a) => commitQuestion(current.id, a)} />
+                <MultiQ
+                  question={current.question}
+                  initial={answers[current.id]?.optionIds}
+                  onCommit={(a) => commitQuestion(current.id, a)}
+                />
               )}
             </motion.div>
           )}

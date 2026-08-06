@@ -1,28 +1,71 @@
 import { Lock } from 'lucide-react';
-import { caregivers, caregiversFor, equipment, medicalTips } from '../data/carePlan';
+import { caregivers, caregiversFor, coordinator } from '../data/carePlan';
+import CoordinatorMessage from './CoordinatorMessage';
+import RecommendationCard from './RecommendationCard';
+import { CoordinatorContact, PlanAsk } from './PlanFooterBlocks';
 import CaregiverRow from './CaregiverRow';
 import Button from './Button';
 
-function Tips({ items }) {
-  return (
-    <div className="doc-tips">
-      {items.map((t) => (
-        <div className="tip" key={t.title}>
-          <p className="tip-title">{t.title}</p>
-          <p className="tip-body">{t.body}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// The body of a care plan — matched caregivers and the recommendations behind the
-// paywall. Shared by the side panel and the full page so they never drift apart.
+// The body of a care plan, in the order the client's document lays it out: the
+// coordinator's letter, then the recommendations — each saying why it is being
+// recommended for this person — then the full caregiver list, then the two ways the
+// family can push back on the plan. Shared by the side panel and the full page so
+// they never drift apart.
 export default function PlanContents({ plan, unlocked, onSelectCaregiver, onUnlock, archived }) {
+  const open = (plan.recommendations || []).filter((r) => !r.locked);
+  const locked = (plan.recommendations || []).filter((r) => r.locked);
+
   return (
     <>
+      {plan.letter && <CoordinatorMessage letter={plan.letter} />}
+
+      <p className="doc-section-title">What we recommend</p>
+
+      {open.map((rec) => (
+        <RecommendationCard
+          key={rec.id}
+          rec={rec}
+          unlocked={unlocked}
+          onSelectCaregiver={onSelectCaregiver}
+        />
+      ))}
+
+      {/* Everything else in the plan is written and ready; the subscription is what
+          opens it, along with the caregivers' numbers. The heading stays readable so
+          it is obvious what is being withheld. */}
+      {unlocked ? (
+        locked.map((rec) => (
+          <RecommendationCard key={rec.id} rec={rec} unlocked onSelectCaregiver={onSelectCaregiver} />
+        ))
+      ) : (
+        <div className="locked-region">
+          <div className="locked-content" aria-hidden="true">
+            {locked.map((rec) => (
+              <RecommendationCard key={rec.id} rec={rec} unlocked={false} />
+            ))}
+          </div>
+          <div className="locked-overlay">
+            <span className="locked-badge">
+              <Lock size={14} strokeWidth={2} />
+            </span>
+            <p className="locked-title">
+              {locked.length} more recommendations in the full plan
+            </p>
+            <p className="locked-note">
+              Which doctor visits to book for {plan.firstName}, the changes that make the flat
+              safer, and what there is nearby
+              {archived ? '.' : ' — plus the direct number of every caregiver.'}
+            </p>
+            <Button variant="primary" size="lg" onClick={onUnlock}>
+              <Lock size={12} strokeWidth={2} /> Subscribe to see the full plan
+            </Button>
+          </div>
+        </div>
+      )}
+
       <p className="doc-section-title">
-        Matched caregivers <span className="doc-count">{plan.caregiverCount ?? caregivers.length}</span>
+        Everyone we matched{' '}
+        <span className="doc-count">{plan.caregiverCount ?? caregivers.length}</span>
       </p>
 
       {archived ? (
@@ -42,37 +85,11 @@ export default function PlanContents({ plan, unlocked, onSelectCaregiver, onUnlo
         </>
       )}
 
-      {/* The section heading stays readable so it is obvious what is being withheld;
-          the advice itself is blurred out under a white gradient with the CTA on top. */}
-      <p className="doc-section-title">Doctor & medical recommendations</p>
-
-      {unlocked ? (
+      {!archived && (
         <>
-          <Tips items={medicalTips} />
-          <p className="doc-section-title">Suggested aids & equipment</p>
-          <Tips items={equipment} />
+          <PlanAsk />
+          <CoordinatorContact coordinator={plan.coordinator || coordinator} />
         </>
-      ) : (
-        <div className="locked-region">
-          <div className="locked-content" aria-hidden="true">
-            <Tips items={medicalTips} />
-            <p className="doc-section-title">Suggested aids & equipment</p>
-            <Tips items={equipment} />
-          </div>
-          <div className="locked-overlay">
-            <span className="locked-badge">
-              <Lock size={14} strokeWidth={2} />
-            </span>
-            <p className="locked-title">Recommendations are part of the full plan</p>
-            <p className="locked-note">
-              Which doctor visits to book for {plan.firstName}, and the aids that make the flat
-              safer{archived ? '.' : ' — plus the direct number of every caregiver above.'}
-            </p>
-            <Button variant="primary" size="lg" onClick={onUnlock}>
-              <Lock size={12} strokeWidth={2} /> Subscribe to see the full plan
-            </Button>
-          </div>
-        </div>
       )}
     </>
   );

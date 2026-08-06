@@ -42,7 +42,11 @@ export default function CarePlanCard({ plan, unlocked, onOpen, onSelectCaregiver
           </span>
         </div>
 
-        <p className="doc-p">{plan.summary}</p>
+        {plan.narrative.map((p, i) => (
+          <p className="doc-p" key={i}>
+            {p}
+          </p>
+        ))}
 
         <div className="facts">
           {plan.facts.map((f) => (
@@ -71,7 +75,8 @@ export default function CarePlanCard({ plan, unlocked, onOpen, onSelectCaregiver
             Open full care plan <ArrowUpRight size={12} strokeWidth={2} />
           </Button>
           <span className="doc-cta-note">
-            All {caregivers.length} caregivers · doctor & equipment recommendations
+            Jovana’s message · {plan.recommendations.length} recommendations ·{' '}
+            {caregivers.length} caregivers
           </span>
         </div>
       </div>
