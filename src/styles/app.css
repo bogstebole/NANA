@@ -2867,7 +2867,40 @@ input {
   width: 100%;
   max-height: 46vh;
   overflow-y: auto;
-  padding-right: var(--spacing-1);
+  padding-right: var(--spacing-3);
+  /* the list ended on a hard clip, which reads as sliced next to a bar this
+     faint — it fades out instead, which is also the scroll affordance */
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 88%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 88%, transparent 100%);
+}
+
+/* Firefox only. Setting either standard property makes Chrome drop the
+   ::-webkit- rules below entirely, and its `thin` is still an 11px slab — so
+   these are scoped away from it rather than declared alongside. */
+@supports (-moz-appearance: none) {
+  .imm-review {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(151, 67, 36, 0.16) transparent;
+  }
+}
+
+/* The default bar is a hard grey slab over the clouds — far too loud for this
+   screen. A hairline in the primary's own brown, on no track at all. */
+.imm-review::-webkit-scrollbar {
+  width: 4px;
+}
+
+.imm-review::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.imm-review::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(151, 67, 36, 0.16);
+}
+
+.imm-review:hover::-webkit-scrollbar-thumb {
+  background: rgba(151, 67, 36, 0.28);
 }
 
 .imm-review-row {
