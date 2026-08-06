@@ -87,6 +87,7 @@ function SingleQ({ question, onCommit }) {
           key={opt.id}
           type="button"
           variants={piece}
+          whileHover={{ y: -1 }}
           className={`imm-option${picked === opt.id ? ' is-selected' : ''}`}
           onClick={() => {
             if (picked) return;
@@ -117,6 +118,7 @@ function MultiQ({ question, initial, onCommit }) {
             key={opt.id}
             type="button"
             variants={piece}
+            whileHover={{ y: -1 }}
             className={`imm-option${ids.includes(opt.id) ? ' is-selected' : ''}`}
             onClick={() => toggle(opt.id)}
           >

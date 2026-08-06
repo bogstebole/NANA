@@ -2141,12 +2141,17 @@ input {
   border: 1px solid rgba(255, 255, 255, 0.75);
   box-shadow: 0 8px 32px rgba(122, 92, 70, 0.08);
   text-align: left;
-  transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+  /* No `transform` here. Framer drives this element's transform every frame via
+     inline style, and a CSS transition on the same property intercepts each of
+     those writes and eases them over its own 250ms — so the entrance arrived
+     lagged, and when Framer settled, each card played one last 250ms glide into
+     place. Staggered, that trailing glide read as a second ripple after the
+     animation had visibly finished. The hover lift lives in `whileHover` now. */
+  transition: background 0.25s ease, border-color 0.25s ease;
 }
 
 .imm-option:hover {
   background: rgba(255, 255, 255, 0.72);
-  transform: translateY(-1px);
 }
 
 .imm-option.is-selected {
@@ -2375,7 +2380,6 @@ input {
 
 .imm-option.is-static:hover {
   background: rgba(255, 255, 255, 0.52);
-  transform: none;
 }
 
 /* ---------- Frailty scale ---------- */
