@@ -1,6 +1,6 @@
 # NANA Prime — Onboarding prototype
 
-Interactive prototype of the client onboarding flow (register → 4-step questionnaire → completion), built 1:1 against the Figma design ("Nana Prime" file) with design tokens mirrored from the "NANA Prime - Tailwind config" file.
+Interactive prototype of the client onboarding flow (register → branching frailty assessment → care plan), built 1:1 against the Figma design ("Nana Prime" file) with design tokens mirrored from the "NANA Prime - Tailwind config" file.
 
 ## Run
 
@@ -99,8 +99,8 @@ assistant posts one section at a time, the answered cards stay in the thread as
 artifacts, and the composer at the bottom is the only persistent control.
 
 1. **Register** — name + email (both required, email validated)
-2. **Chat** — the assistant greets the user, then works through four sections one at
-   a time: Elderly profile, Emergency contacts, Caregiver tasks, Health condition
+2. **Chat** — the assistant greets the user, then works through the sections one at a
+   time (see Question content above)
    - Each section is introduced by a plain assistant message, not a title — finishing one makes the assistant "think", then post the next
    - Exactly one question is active across the whole thread; answered ones collapse into an overview row with answer chips and a pencil edit button; the rest stay listed as pending, so how much is left in the section is always visible
    - Clicking a collapsed row re-opens it for editing at any point, in any section, and unfolds that section so the active card is never hidden
@@ -115,9 +115,6 @@ section measured 172px against 68px for the summary row.
 3. **Care plan** — once everything is answered the assistant posts the plan as a chat
    artifact: a grey container holding a white document, with a summary and fact grid
    generated from the actual answers, plus the top matches.
-
-`src/data/flow.js` still groups questions into `steps` for readability while editing
-copy; the chat renders the flattened `questions` export.
 
 ## Paywall
 
