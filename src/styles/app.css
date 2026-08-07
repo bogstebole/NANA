@@ -2167,9 +2167,11 @@ input {
   width: 26px;
   height: 26px;
   border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.8);
+  /* White on a white-ish glass card left this all but invisible. The warm brown
+     the card's own shadow uses reads against it without shouting. */
+  background: rgba(122, 92, 70, 0.13);
   font-size: var(--text-xs-size);
-  color: #7d6f63;
+  color: #6d5c4e;
   transition: background 0.25s ease, color 0.25s ease;
 }
 
@@ -2242,8 +2244,16 @@ input {
 .imm-actions {
   margin-top: var(--spacing-6);
   display: flex;
+  align-items: center;
   justify-content: center;
 }
+
+/* with a Back button the row spans the card and the two sit at opposite ends */
+.imm-actions.has-back {
+  width: 100%;
+  justify-content: space-between;
+}
+
 
 /* ---------- Questionnaire variant switch (nav) ---------- */
 

@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertTriangle, ArrowUpRight, LayoutList, Pencil, Volume2, VolumeX } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowUpRight,
+  LayoutList,
+  Pencil,
+  Volume2,
+  VolumeX,
+} from 'lucide-react';
 import { applicableQuestions, flowContext, steps } from '../data/flow';
 import { frailtyOf } from '../data/frailty';
 import { answerSummary, dependentsOf, isLoadBearing, reconcile } from '../data/dependencies';
@@ -35,6 +43,24 @@ const list = {
   animate: { opacity: 1, transition: { staggerChildren: 0.055 } },
   exit: { opacity: 0, transition: { staggerChildren: 0.03, staggerDirection: -1 } },
 };
+
+// The footer row of an asking screen. Back sits opposite the forward control, and
+// single-select screens get one too even though they auto-advance and have no
+// Continue — otherwise the only question type you cannot reverse out of is the
+// most common one.
+function ImmActions({ onBack, children }) {
+  return (
+    <motion.div className={`imm-actions${onBack ? ' has-back' : ''}`} variants={piece}>
+      {onBack && (
+        <Button variant="secondary" size="lg" onClick={onBack}>
+          <ArrowLeft size={14} strokeWidth={1.75} />
+          Back
+        </Button>
+      )}
+      {children}
+    </motion.div>
+  );
+}
 
 const isAskable = (s) => s.type === 'question' || s.type === 'field';
 const answeredIn = (answers) => (s) => !!answers[s.type === 'field' ? s.questionId : s.id];
@@ -78,35 +104,42 @@ function buildSequence(answers) {
   return seq;
 }
 
-function SingleQ({ question, onCommit }) {
+function SingleQ({ question, initial, onBack, onCommit }) {
   const [picked, setPicked] = useState(null);
+  // `picked` doubles as the commit-in-flight lock, so the previously given answer
+  // is shown separately — otherwise coming back to a question you have already
+  // answered would either look blank or refuse to accept a different option.
+  const shown = picked ?? initial ?? null;
   return (
-    <motion.div className="imm-options" variants={list}>
-      {question.options.map((opt, i) => (
-        <motion.button
-          key={opt.id}
-          type="button"
-          variants={piece}
-          whileHover={{ y: -1 }}
-          className={`imm-option${picked === opt.id ? ' is-selected' : ''}`}
-          onClick={() => {
-            if (picked) return;
-            setPicked(opt.id);
-            setTimeout(() => onCommit({ optionId: opt.id }), 500);
-          }}
-        >
-          <span className="imm-letter">{letterFor(i)}</span>
-          <span className="imm-option-text">
-            <span className="imm-option-title">{opt.title}</span>
-            {opt.description && <span className="imm-option-desc">{opt.description}</span>}
-          </span>
-        </motion.button>
-      ))}
-    </motion.div>
+    <>
+      <motion.div className="imm-options" variants={list}>
+        {question.options.map((opt, i) => (
+          <motion.button
+            key={opt.id}
+            type="button"
+            variants={piece}
+            whileHover={{ y: -1 }}
+            className={`imm-option${shown === opt.id ? ' is-selected' : ''}`}
+            onClick={() => {
+              if (picked) return;
+              setPicked(opt.id);
+              setTimeout(() => onCommit({ optionId: opt.id }), 500);
+            }}
+          >
+            <span className="imm-letter">{letterFor(i)}</span>
+            <span className="imm-option-text">
+              <span className="imm-option-title">{opt.title}</span>
+              {opt.description && <span className="imm-option-desc">{opt.description}</span>}
+            </span>
+          </motion.button>
+        ))}
+      </motion.div>
+      {onBack && <ImmActions onBack={onBack} />}
+    </>
   );
 }
 
-function MultiQ({ question, initial, initialOther, onCommit }) {
+function MultiQ({ question, initial, initialOther, onBack, onCommit }) {
   const [ids, setIds] = useState(() => [...(initial || [])]);
   const [otherText, setOtherText] = useState(() => initialOther || '');
   const toggle = (id) =>
@@ -159,18 +192,18 @@ function MultiQ({ question, initial, initialOther, onCommit }) {
           </motion.label>
         )}
       </motion.div>
-      <motion.div className="imm-actions" variants={piece}>
+      <ImmActions onBack={onBack}>
         <Button variant="primary" size="lg" disabled={!question.allowEmpty && empty} onClick={commit}>
           {question.allowEmpty && empty ? 'None of these' : 'Continue'}
         </Button>
-      </motion.div>
+      </ImmActions>
     </>
   );
 }
 
 // One field on its own screen — the reason the immersive variant reads as a
 // conversation rather than a form.
-function FieldQ({ item, initial, onCommit }) {
+function FieldQ({ item, initial, onBack, onCommit }) {
   const [value, setValue] = useState(initial || '');
   const ref = useRef(null);
   const optional = !!item.field.optional;
@@ -197,11 +230,11 @@ function FieldQ({ item, initial, onCommit }) {
           }}
         />
       </motion.label>
-      <motion.div className="imm-actions" variants={piece}>
+      <ImmActions onBack={onBack}>
         <Button variant="primary" size="lg" disabled={!ready} onClick={commit}>
           {optional && !value.trim() ? 'Skip' : 'Continue'}
         </Button>
-      </motion.div>
+      </ImmActions>
     </>
   );
 }
@@ -281,6 +314,19 @@ export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onF
     while (i < seq.length && isAskable(seq[i]) && done(seq[i])) i += 1;
     if (i >= seq.length) setStage('review');
     else setCurrentId(seq[i].id);
+  };
+
+  // One screen back. If the user got here by editing from the review, back means
+  // the review — that is where they came from, not the previous question.
+  const seqIndex = sequence.findIndex((s) => s.id === current?.id);
+  const canGoBack = stage === 'asking' && (returning || seqIndex > 0);
+  const goBack = () => {
+    if (returning) {
+      setReturning(false);
+      setStage('review');
+      return;
+    }
+    if (seqIndex > 0) setCurrentId(sequence[seqIndex - 1].id);
   };
 
   const commitQuestion = (questionId, answer) => {
@@ -573,11 +619,11 @@ export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onF
                   </motion.span>
                 ))}
               </motion.div>
-              <motion.div className="imm-actions" variants={piece}>
+              <ImmActions onBack={canGoBack ? goBack : null}>
                 <Button variant="primary" size="lg" onClick={() => settle(answers, current.id)}>
                   Continue
                 </Button>
-              </motion.div>
+              </ImmActions>
             </motion.div>
           )}
 
@@ -586,11 +632,11 @@ export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onF
               <motion.p className="imm-intro-text" variants={piece}>
                 {current.text}
               </motion.p>
-              <motion.div className="imm-actions" variants={piece}>
+              <ImmActions onBack={canGoBack ? goBack : null}>
                 <Button variant="primary" size="lg" onClick={() => settle(answers, current.id)}>
                   Continue
                 </Button>
-              </motion.div>
+              </ImmActions>
             </motion.div>
           )}
 
@@ -611,6 +657,7 @@ export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onF
                   drafts[current.questionId]?.[current.field.id] ??
                   answers[current.questionId]?.values?.[current.field.id]
                 }
+                onBack={canGoBack ? goBack : null}
                 onCommit={(v) => commitField(current, v)}
               />
             </motion.div>
@@ -628,13 +675,19 @@ export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onF
                 {current.question.subtitle}
               </motion.p>
               {current.question.type === 'single' && (
-                <SingleQ question={current.question} onCommit={(a) => commitQuestion(current.id, a)} />
+                <SingleQ
+                  question={current.question}
+                  initial={answers[current.id]?.optionId}
+                  onBack={canGoBack ? goBack : null}
+                  onCommit={(a) => commitQuestion(current.id, a)}
+                />
               )}
               {current.question.type === 'multi' && (
                 <MultiQ
                   question={current.question}
                   initial={answers[current.id]?.optionIds}
                   initialOther={answers[current.id]?.other}
+                  onBack={canGoBack ? goBack : null}
                   onCommit={(a) => commitQuestion(current.id, a)}
                 />
               )}
