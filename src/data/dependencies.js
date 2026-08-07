@@ -94,6 +94,9 @@ export function answerSummary(question, answer) {
     return opt ? [opt.title] : [];
   }
   const picked = question.options.filter((o) => answer.optionIds?.includes(o.id));
-  if (!picked.length) return ['None of these'];
-  return picked.map((o) => o.short || o.title);
+  const labels = picked.map((o) => o.short || o.title);
+  // what they typed into "something else" is the answer they cared enough to write
+  if (answer.other?.trim()) labels.push(answer.other.trim());
+  if (!labels.length) return ['None of these'];
+  return labels;
 }

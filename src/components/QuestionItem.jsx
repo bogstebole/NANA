@@ -23,16 +23,42 @@ function answerChips(question, answer) {
     return opt ? [opt.title] : [];
   }
   const opts = question.options.filter((o) => answer.optionIds?.includes(o.id));
-  if (opts.length > 1 && opts.every((o) => o.short)) {
+  const other = answer.other?.trim();
+  if (!other && opts.length > 1 && opts.every((o) => o.short)) {
     return [opts.map((o) => o.short).join(', ')];
   }
-  if (opts.length <= 2) return opts.map((o) => o.title);
-  return [...opts.slice(0, 2).map((o) => o.title), `+${opts.length - 2}`];
+  const labels = [...opts.map((o) => o.title), ...(other ? [other] : [])];
+  if (labels.length <= 2) return labels;
+  return [...labels.slice(0, 2), `+${labels.length - 2}`];
+}
+
+// The "something else" row: reads as one more option card, but it is a text field.
+// A label rather than a button — an input inside a button is not reliably focusable.
+function OtherCard({ letter, value, placeholder, onChange, onEnter }) {
+  const filled = !!value.trim();
+  return (
+    <label className={`select-card is-other${filled ? ' selected' : ''}`}>
+      <NumberIndicator selected={filled}>{letter}</NumberIndicator>
+      <div className="sc-content">
+        <input
+          type="text"
+          className="sc-other-input"
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') onEnter?.();
+          }}
+        />
+      </div>
+    </label>
+  );
 }
 
 function ActiveBody({ question, answer, onCommit }) {
   const [draftValues, setDraftValues] = useState(() => ({ ...(answer?.values || {}) }));
   const [draftIds, setDraftIds] = useState(() => [...(answer?.optionIds || [])]);
+  const [otherText, setOtherText] = useState(() => answer?.other || '');
   const [pickedId, setPickedId] = useState(answer?.optionId ?? null);
   const firstInputRef = useRef(null);
   const inputRefs = useRef([]);
@@ -104,6 +130,12 @@ function ActiveBody({ question, answer, onCommit }) {
 
   const toggle = (id) =>
     setDraftIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
+  const other = otherText.trim();
+  const empty = draftIds.length === 0 && !other;
+  const commitMulti = () =>
+    !(!question.allowEmpty && empty) &&
+    onCommit({ optionIds: draftIds, ...(other ? { other } : {}) });
+
   return (
     <>
       <div className="selection-container">
@@ -117,14 +149,19 @@ function ActiveBody({ question, answer, onCommit }) {
             onClick={() => toggle(opt.id)}
           />
         ))}
+        {question.allowOther && (
+          <OtherCard
+            letter={letterFor(question.options.length)}
+            value={otherText}
+            placeholder={question.otherPlaceholder || 'Something else'}
+            onChange={setOtherText}
+            onEnter={commitMulti}
+          />
+        )}
       </div>
       <div className="card-footer">
-        <Button
-          variant="secondary"
-          disabled={!question.allowEmpty && draftIds.length === 0}
-          onClick={() => onCommit({ optionIds: draftIds })}
-        >
-          {question.allowEmpty && draftIds.length === 0 ? 'None of these' : 'Next'}
+        <Button variant="secondary" disabled={!question.allowEmpty && empty} onClick={commitMulti}>
+          {question.allowEmpty && empty ? 'None of these' : 'Next'}
         </Button>
       </div>
     </>

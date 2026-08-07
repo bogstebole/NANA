@@ -2179,6 +2179,7 @@ input {
 }
 
 .imm-option-text {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 1px;
@@ -3023,4 +3024,42 @@ input {
   line-height: 18px;
   color: var(--color-primary-800);
   opacity: 0.7;
+}
+
+/* ---------- "Something else" row (multi-select escape hatch) ---------- */
+
+/* Reads as one more option card, but it is a text field. A label, not a button,
+   so a click anywhere on it lands in the input. */
+.select-card.is-other {
+  cursor: text;
+}
+
+.sc-other-input {
+  width: 100%;
+  padding: 0;
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-leading);
+  color: var(--text-primary);
+}
+
+.sc-other-input::placeholder {
+  color: var(--text-disabled);
+}
+
+.imm-option.is-other {
+  cursor: text;
+}
+
+.imm-option-input {
+  width: 100%;
+  padding: 0;
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-leading);
+  font-weight: var(--font-medium);
+  color: var(--color-primary-900);
+}
+
+.imm-option-input::placeholder {
+  font-weight: var(--font-normal);
+  color: rgba(76, 34, 18, 0.42);
 }

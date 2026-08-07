@@ -195,6 +195,8 @@ export const steps = [
       {
         id: 'lifestyle',
         type: 'multi',
+        allowOther: true,
+        otherPlaceholder: 'Something else that would help',
         when: ({ band }) => band === 'light',
         title: 'What would make the biggest difference right now?',
         subtitle: 'Pick anything that would help them stay as they are',
@@ -213,6 +215,8 @@ export const steps = [
       {
         id: 'household-tasks',
         type: 'multi',
+        allowOther: true,
+        otherPlaceholder: 'Something else that’s become hard',
         when: ({ band }) => band === 'moderate',
         title: 'You said they need a hand around the house. Which of these?',
         subtitle: 'Tick whatever has become difficult',
@@ -244,6 +248,8 @@ export const steps = [
       {
         id: 'personal-care',
         type: 'multi',
+        allowOther: true,
+        otherPlaceholder: 'Something else they need help with',
         when: ({ band }) => band === 'high',
         title: 'Where do they need hands-on help?',
         subtitle: 'Tick everything that applies today',
@@ -332,6 +338,8 @@ export const steps = [
       {
         id: 'palliative-needs',
         type: 'multi',
+        allowOther: true,
+        otherPlaceholder: 'Something else that would help',
         when: ({ band }) => band === 'palliative',
         title: 'What would help the family most right now?',
         subtitle: 'We’ll put a coordinator alongside you either way',
@@ -446,7 +454,11 @@ export function optionTitles(questionId, answer) {
     return q.options.filter((o) => o.id === answer.optionId).map((o) => o.title);
   }
   if (q.type === 'multi') {
-    return q.options.filter((o) => answer.optionIds?.includes(o.id)).map((o) => o.title);
+    const titles = q.options.filter((o) => answer.optionIds?.includes(o.id)).map((o) => o.title);
+    // whatever the user typed into the "something else" row is an answer like any
+    // other — it must not stop at the card it was entered in
+    if (answer.other?.trim()) titles.push(answer.other.trim());
+    return titles;
   }
   return [];
 }

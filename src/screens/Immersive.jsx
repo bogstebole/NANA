@@ -106,10 +106,16 @@ function SingleQ({ question, onCommit }) {
   );
 }
 
-function MultiQ({ question, initial, onCommit }) {
+function MultiQ({ question, initial, initialOther, onCommit }) {
   const [ids, setIds] = useState(() => [...(initial || [])]);
+  const [otherText, setOtherText] = useState(() => initialOther || '');
   const toggle = (id) =>
     setIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const other = otherText.trim();
+  const empty = ids.length === 0 && !other;
+  const commit = () =>
+    !(!question.allowEmpty && empty) && onCommit({ optionIds: ids, ...(other ? { other } : {}) });
+
   return (
     <>
       <motion.div className="imm-options" variants={list}>
@@ -129,15 +135,33 @@ function MultiQ({ question, initial, onCommit }) {
             </span>
           </motion.button>
         ))}
+
+        {/* Reads as one more card, but it is a text field — for when the list
+            simply does not contain what this family needs. */}
+        {question.allowOther && (
+          <motion.label
+            variants={piece}
+            className={`imm-option is-other${other ? ' is-selected' : ''}`}
+          >
+            <span className="imm-letter">{letterFor(question.options.length)}</span>
+            <span className="imm-option-text">
+              <input
+                type="text"
+                className="imm-option-input"
+                value={otherText}
+                placeholder={question.otherPlaceholder || 'Something else'}
+                onChange={(e) => setOtherText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') commit();
+                }}
+              />
+            </span>
+          </motion.label>
+        )}
       </motion.div>
       <motion.div className="imm-actions" variants={piece}>
-        <Button
-          variant="primary"
-          size="lg"
-          disabled={!question.allowEmpty && ids.length === 0}
-          onClick={() => onCommit({ optionIds: ids })}
-        >
-          {question.allowEmpty && ids.length === 0 ? 'None of these' : 'Continue'}
+        <Button variant="primary" size="lg" disabled={!question.allowEmpty && empty} onClick={commit}>
+          {question.allowEmpty && empty ? 'None of these' : 'Continue'}
         </Button>
       </motion.div>
     </>
@@ -610,6 +634,7 @@ export default function Immersive({ user, answers, onAnswer, onPlan, onExit, onF
                 <MultiQ
                   question={current.question}
                   initial={answers[current.id]?.optionIds}
+                  initialOther={answers[current.id]?.other}
                   onCommit={(a) => commitQuestion(current.id, a)}
                 />
               )}

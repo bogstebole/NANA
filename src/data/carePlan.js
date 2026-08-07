@@ -265,6 +265,15 @@ function risksOf(answers) {
   return risks.slice(0, 3);
 }
 
+// The support section asks a different question per band, and it is the one place
+// the family describes their own needs — including anything they typed into the
+// "something else" row, which optionTitles folds in.
+const SUPPORT_QUESTIONS = ['lifestyle', 'household-tasks', 'personal-care', 'palliative-needs'];
+
+function supportNeedsOf(answers) {
+  return SUPPORT_QUESTIONS.flatMap((id) => optionTitles(id, answers[id]));
+}
+
 const listOf = (items) =>
   items.length <= 1
     ? items[0] || ''
@@ -300,6 +309,7 @@ export function buildPlan(answers) {
 
   const household = HOUSEHOLD_PHRASE[answers['household']?.optionId];
   const helper = answers['who-helps-now']?.optionId;
+  const needs = supportNeedsOf(answers);
   const risks = risksOf(answers);
   const actions = REASON_ACTIONS[reasonId] || REASON_ACTIONS['daily-living'];
   const role = CAREGIVER_ROLE[band];
@@ -386,12 +396,16 @@ export function buildPlan(answers) {
             ? 'Daily nursing-level visits'
             : 'Regular caregiver visits',
       why:
+        // their own words first — this is what they actually asked for, including
+        // anything the option list did not cover
         `${firstName} would have steady support with ${listOf(
-          band === 'light'
-            ? ['company', 'getting out', 'staying active']
-            : band === 'high' || band === 'severe' || band === 'palliative'
-              ? ['personal care', 'meals', 'medication']
-              : ['the house', 'meals', 'errands']
+          needs.length
+            ? needs.slice(0, 4).map((n) => n.toLowerCase())
+            : band === 'light'
+              ? ['company', 'getting out', 'staying active']
+              : band === 'high' || band === 'severe' || band === 'palliative'
+                ? ['personal care', 'meals', 'medication']
+                : ['the house', 'meals', 'errands']
         )}, and you would know that someone is with them every day.` +
         (worry ? ` It is also the most direct answer to what worries you.` : ''),
       providers: 'caregivers',
@@ -438,6 +452,7 @@ export function buildPlan(answers) {
     { label: 'Frailty level', value: frailty ? `${frailty.level} · ${frailty.label}` : '—' },
     { label: 'Getting around', value: mobility || '—' },
     { label: 'Help needed', value: dailyHelp || '—' },
+    { label: 'Where help is needed', value: needs.length ? needs.join(', ') : '—' },
     { label: 'Reason for contact', value: reason || '—' },
     { label: 'How it started', value: onset || '—' },
     { label: 'Hospital stay', value: hospital || '—' },
