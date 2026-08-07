@@ -2882,11 +2882,27 @@ input {
   width: 100%;
   max-height: 46vh;
   overflow-y: auto;
+  /* The mask is anchored to the visible box, not to the scrolled content, so the
+     fade always sits in the same place — which left the last row washed out even
+     when you had scrolled all the way to it. The padding gives the fade its own
+     scroll space: at the bottom of the list the band covers empty padding, and
+     the last answer is fully opaque. Both are the same length, so they track. */
+  --review-fade: 52px;
   padding-right: var(--spacing-3);
-  /* the list ended on a hard clip, which reads as sliced next to a bar this
-     faint — it fades out instead, which is also the scroll affordance */
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 88%, transparent 100%);
-  mask-image: linear-gradient(180deg, #000 0%, #000 88%, transparent 100%);
+  /* a few px past the fade so sub-pixel rounding can never tip the last row into it */
+  padding-bottom: calc(var(--review-fade) + var(--spacing-1));
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    #000 0%,
+    #000 calc(100% - var(--review-fade)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    #000 0%,
+    #000 calc(100% - var(--review-fade)),
+    transparent 100%
+  );
 }
 
 /* Firefox only. Setting either standard property makes Chrome drop the
