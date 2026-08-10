@@ -226,7 +226,11 @@ It answers three things a questionnaire structurally cannot:
 blank page, not a question: *"Recite mi svojim rečima šta se dešava."* One
 paragraph typically fills four to six answers at once, and the flow resumes from
 what is missing. Measured on a realistic paragraph: 16 remaining → 12, plus a note,
-in one turn.
+in one turn. Four **starters** sit under the field for anyone staring at a blank
+page not knowing where to begin — each is sent as the user's own first message, so
+Jovana picks it up like anything else they could have typed. A line about
+emergencies sits below them: a chat is the wrong channel for a fall, and saying so
+costs nothing.
 
 **2. "What if the options don't contain what I'd say?"** A free-text field sits on
 every screen, under the cards — the cards are a shortcut, never a cage.
@@ -251,6 +255,13 @@ frailty scoring, the branching and the care plan all read them.
 `stateMessage()` goes out each turn as a `role: "system"` message inside
 `messages[]` — carrying the remaining questions *and the notes so far*, so nothing
 already said gets asked again — without invalidating the cached prefix above it.
+
+**There is no question counter.** The bar tracks data actually collected, and the
+label names the section you are in. A count was tried and removed: it could only
+count questions from the list, so a `follow_up` screen — Jovana's own question,
+which by design is not in the list — froze the number while screens went by. A
+number the flow cannot honour reads as broken; with follow-ups the total is
+genuinely unknowable, so the honest move is not to claim one.
 
 **The support section is withheld until daily life is fully answered.** The frailty
 estimate exists from the first answer, but a band derived from two answers is not

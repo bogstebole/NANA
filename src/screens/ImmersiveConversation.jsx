@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowUpRight, LayoutList, PenLine, Volume2, VolumeX } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, LayoutList, PenLine, Volume2, VolumeX } from 'lucide-react';
 import { questionById } from '../data/flow';
 import { frailtyOf } from '../data/frailty';
 import { remainingQuestions, systemPrompt } from '../data/conversation';
-import { Q, CFS_SR } from '../data/flow.sr';
+import { Q, CFS_SR, STARTERS, SECTION } from '../data/flow.sr';
 import { buildPlan, caregivers } from '../data/carePlan';
 import { createClient, runTurn } from '../lib/claudeChat';
 import CloudBackground from '../components/immersive/CloudBackground';
@@ -225,6 +225,9 @@ export default function ImmersiveConversation({
   const frailty = frailtyOf(answers);
   const remaining = remainingQuestions(answers);
   const answered = Object.keys(answers).length;
+  // The bar tracks data actually collected, which is real. The old "još 12"
+  // counted only questions from the list, so a `follow_up` screen froze it while
+  // screens went by — a number the flow cannot honour is worse than none.
   const progress = answered + remaining.length ? answered / (answered + remaining.length) : 0;
   const planName = answers['about-person']?.values?.name?.trim().split(' ')[0] || 'nju';
 
@@ -345,14 +348,35 @@ export default function ImmersiveConversation({
                 placeholder="Majka ima 84 godine i živi sama u Vračaru. Pala je dvaput ove godine…"
                 onSend={(t) => turn(t, answers, notes)}
               />
-              <motion.button
-                type="button"
-                className="imm-skip"
-                variants={piece}
-                onClick={() => turn('Radije bih po pitanjima.', answers, notes)}
-              >
-                Radije po pitanjima
-              </motion.button>
+
+              <motion.p className="imm-starters-label" variants={piece}>
+                ili krenite od nekog od ovih
+              </motion.p>
+              <motion.div className="imm-starters" variants={list}>
+                {STARTERS.map((s) => (
+                  <motion.button
+                    key={s.id}
+                    type="button"
+                    className="imm-starter"
+                    variants={piece}
+                    whileHover={{ y: -1 }}
+                    onClick={() => turn(s.title, answers, notes)}
+                  >
+                    <span className="imm-starter-text">
+                      <span className="imm-starter-title">{s.title}</span>
+                      <span className="imm-starter-sub">{s.sub}</span>
+                    </span>
+                    <ArrowRight size={16} strokeWidth={1.75} className="imm-starter-arrow" />
+                  </motion.button>
+                ))}
+              </motion.div>
+
+              {/* A chat is the wrong channel for an emergency, and saying so is
+                  cheap. Better here than discovered at the wrong moment. */}
+              <motion.p className="imm-urgent" variants={piece}>
+                Ako je hitno — pala je, ne može da diše, ne prepoznaje vas — nemojte pisati meni.
+                Zovite <strong>194</strong>.
+              </motion.p>
             </motion.div>
           )}
 
@@ -377,7 +401,7 @@ export default function ImmersiveConversation({
               exit="exit"
             >
               <motion.p className="imm-count" variants={piece}>
-                {remaining.length ? `još ${remaining.length}` : 'skoro gotovo'}
+                {SECTION[remaining[0]?.sekcija] || 'Skoro gotovo'}
               </motion.p>
               {/* Jovana's own words — the flow's phrasing is never shown. */}
               <motion.h1 className="imm-title" variants={piece}>

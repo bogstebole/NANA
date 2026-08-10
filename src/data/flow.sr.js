@@ -266,3 +266,40 @@ export const CFS_SR = {
   8: { label: 'Veoma izrazito krhka', blurb: 'Potpuno zavisna i pri kraju života. Po pravilu se ne bi oporavila ni od lakše bolesti.' },
   9: { label: 'Terminalno bolesna', blurb: 'Pri kraju života, sa očekivanim trajanjem ispod šest meseci, bez druge izražene krhkosti.' },
 };
+
+// Openers for the blank first screen. The empty page is right for someone who
+// knows what to say; these are for everyone staring at it not knowing where to
+// start. Each one is sent as the user's first message, so Jovana picks it up
+// like anything else the person could have typed.
+export const STARTERS = [
+  {
+    id: 'plan',
+    title: 'Želim plan za svoju majku',
+    sub: 'Krenemo od njenih podataka, pa razgovaramo',
+  },
+  {
+    id: 'changed',
+    title: 'Nešto se promenilo i zabrinut sam',
+    sub: 'Pad, zbunjenost, loša nedelja — recite mi šta se desilo',
+  },
+  {
+    id: 'help',
+    title: 'Treba mi neko u stanu nekoliko puta nedeljno',
+    sub: 'Negovateljice u njenom kraju i koliko koštaju',
+  },
+  {
+    id: 'abroad',
+    title: 'Živim u inostranstvu i ne znam odakle da počnem',
+    sub: 'Videćemo šta može da se organizuje i bez vas tamo',
+  },
+];
+
+// Where you are, instead of how many questions are left. The count was a promise
+// the flow cannot keep: `follow_up` screens are not in the question list, so the
+// number froze while screens went by.
+export const SECTION = {
+  'getting-to-know': 'Upoznavanje',
+  'daily-life': 'Svakodnevni život',
+  support: 'Kakva podrška',
+  reason: 'Zašto ste se javili',
+};

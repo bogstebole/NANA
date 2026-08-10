@@ -3307,3 +3307,92 @@ input {
   line-height: 18px;
   color: var(--status-no-fg);
 }
+
+/* ---------- Opening screen: starters ---------- */
+
+.imm-starters-label {
+  margin-top: var(--spacing-8);
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: var(--font-medium);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-primary-800);
+  opacity: 0.45;
+}
+
+.imm-starters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  width: 100%;
+  margin-top: var(--spacing-3);
+}
+
+.imm-starter {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  width: 100%;
+  padding: var(--spacing-3) var(--spacing-4);
+  border-radius: var(--radius-2xl);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.52);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: 0 8px 32px rgba(122, 92, 70, 0.08);
+  text-align: left;
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
+
+.imm-starter:hover {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.imm-starter-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.imm-starter-title {
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-leading);
+  font-weight: var(--font-medium);
+  color: var(--color-primary-900);
+}
+
+.imm-starter-sub {
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+  color: var(--color-primary-800);
+  opacity: 0.6;
+}
+
+.imm-starter-arrow {
+  flex-shrink: 0;
+  color: var(--primary-highlight);
+  opacity: 0.55;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.imm-starter:hover .imm-starter-arrow {
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+/* a chat is the wrong channel for an emergency, and saying so costs nothing */
+.imm-urgent {
+  margin-top: var(--spacing-6);
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+  color: var(--color-primary-800);
+  opacity: 0.6;
+}
+
+.imm-urgent strong {
+  font-weight: var(--font-medium);
+  opacity: 1;
+}
