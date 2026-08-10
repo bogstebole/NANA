@@ -45,6 +45,7 @@ const CHAR_MS = 26;
 // than being stamped out. Purely CSS on ~7 spans — nothing animates once a
 // character has settled behind the head.
 const TAIL = 7;
+const HEAD_BLUR = 4.5;
 
 function useTypewriter(full) {
   const [typed, setTyped] = useState('');
@@ -67,26 +68,58 @@ function useTypewriter(full) {
   return typed;
 }
 
-function Line({ text, done }) {
-  if (done) return text;
-  const split = Math.max(0, text.length - TAIL);
-  const head = text.slice(0, split);
-  const tail = text.slice(split);
-  return (
-    <>
-      {head}
-      {tail.split('').map((ch, i) => {
-        const d = tail.length - i; // 1 at the settled end, TAIL at the head
-        return (
-          <span
-            key={split + i}
-            style={{ filter: `blur(${(d / TAIL) * 5}px)`, opacity: 1 - (d / TAIL) * 0.55 }}
-          >
-            {ch}
-          </span>
-        );
-      })}
-    </>
+// The whole sentence is laid out from the start and revealed in place, rather
+// than grown a character at a time. Growing it meant the line re-wrapped and
+// re-centred on every character: words the reader had already read slid out
+// from under them — 385px of sideways travel over one sentence, with single
+// jumps of 28px. Nothing here moves; characters only fade up where they sit.
+//
+// The blur belongs on the *newest* characters, the pen tip. It sat on the trail
+// behind it once, which read as a smudge crossing an otherwise crisp line.
+//
+// Words are the wrapping unit: a span per character would let a line break
+// anywhere, mid-word included, so each word is one inline-block and the spaces
+// between them stay ordinary text — which is also what keeps the break
+// opportunities where the browser expects them.
+function Line({ full, shown }) {
+  const words = useMemo(() => {
+    let at = 0;
+    return full.split(/(\s+)/).map((part) => {
+      const token = { part, start: at, space: /^\s+$/.test(part) };
+      at += part.length;
+      return token;
+    });
+  }, [full]);
+
+  return words.map(({ part, start, space }) =>
+    space ? (
+      part
+    ) : (
+      <span className="imm-word" key={start}>
+        {part.split('').map((ch, i) => {
+          // Every character stays a span for the whole life of the line, even
+          // once it has settled. Dropping back to plain text would hand the
+          // word its kerning back and change its width mid-reveal, which is the
+          // same reflow by another route.
+          const age = shown - 1 - (start + i); // 0 on the character just written
+          const t = age < 0 ? null : age >= TAIL - 1 ? 0 : 1 - age / (TAIL - 1);
+          return (
+            <span
+              key={i}
+              style={
+                t === null
+                  ? { opacity: 0 }
+                  : t === 0
+                    ? undefined
+                    : { filter: `blur(${(t * HEAD_BLUR).toFixed(2)}px)`, opacity: 1 - t * 0.6 }
+              }
+            >
+              {ch}
+            </span>
+          );
+        })}
+      </span>
+    )
   );
 }
 
@@ -153,10 +186,13 @@ function Cards({ question, composer, onPick }) {
   const [ids, setIds] = useState([]);
   const [values, setValues] = useState({});
 
-  // `inputs` questions render nothing. Three stacked field cards were the last
-  // piece of questionnaire left in here; the person answers in a sentence and
-  // Jovana maps it onto the fields.
-  if (question.type === 'inputs') return null;
+  // An `inputs` question has no cards at all — three stacked field cards were
+  // the last piece of questionnaire left in here, and the person now answers in
+  // a sentence that Jovana maps onto the fields. So the composer *is* the whole
+  // answer here. Returning null instead left the screen with a question and no
+  // way to reply, and since `about-person` is the first thing Jovana asks, the
+  // conversation could not get past its own opening line.
+  if (question.type === 'inputs') return composer;
 
   const label = (o) => sr.options?.[o.id] || o.title;
 
@@ -453,9 +489,12 @@ export default function ImmersiveConversation({
                   centres within it, so a one-line question sits in the middle
                   and the cards below never move when the next one is longer. */}
               <h1 className="imm-title imm-line">
+                {/* No caret. It used to sit after the last revealed character;
+                    now the sentence is laid out in full from the start, so the
+                    end of the element is the end of text nobody can see yet.
+                    The blurred head is the write position, and a better one. */}
                 <span>
-                  <Line text={typed} done={doneTyping} />
-                  {!doneTyping && <span className="imm-caret" aria-hidden="true" />}
+                  <Line full={line} shown={typed.length} />
                 </span>
               </h1>
 

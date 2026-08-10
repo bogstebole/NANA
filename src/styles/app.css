@@ -3410,26 +3410,6 @@ input {
 
 /* ---------- Streamed title: words resolving out of a blur ---------- */
 
-/* A caret while the line is still being written. There is no per-character
-   animation: revealed text is plain text, so nothing about it can re-animate. */
-.imm-caret {
-  display: inline-block;
-  width: 2px;
-  height: 0.95em;
-  margin-left: 2px;
-  vertical-align: -0.1em;
-  border-radius: 1px;
-  background: var(--primary);
-  opacity: 0.8;
-  animation: imm-blink 1s steps(2, start) infinite;
-}
-
-@keyframes imm-blink {
-  to {
-    opacity: 0;
-  }
-}
-
 .imm-answer {
   width: 100%;
   display: flex;
@@ -3507,18 +3487,31 @@ input {
   margin-top: 20vh;
 }
 
-/* Two lines of height are reserved and the text centres inside them, so a
-   one-line question sits mid-box and a two-line one fills it — either way what
-   follows starts at the same place. */
+/* Three lines of height are reserved and the text centres inside them, so the
+   line grows out from the middle and what follows starts at the same place
+   whatever Jovana writes. Two lines was not enough: her questions regularly run
+   to three, and the box grew — holding the line still but pushing the cards
+   under it down by a full line every time a long question came up. */
 .imm-line {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: calc(2 * 34px);
+  min-height: calc(3 * 34px);
 }
 
-/* the blurred write-head needs room to bleed rather than clip */
-.imm-line span span {
+/* A word is the unit that wraps: the characters inside it are inline-blocks
+   with no whitespace between them, so a line can only ever break where a real
+   space is. The spaces themselves stay ordinary text between these boxes —
+   inside an inline-block a lone space collapses to nothing, which used to close
+   up every gap the write head passed over. */
+.imm-word {
+  display: inline-block;
+}
+
+/* The blur needs room to bleed rather than clip, which is what the inline-block
+   is for. It is on every character, settled ones included, so the line's
+   metrics are fixed from the first frame and only opacity and blur change. */
+.imm-word > span {
   display: inline-block;
   will-change: filter;
 }
