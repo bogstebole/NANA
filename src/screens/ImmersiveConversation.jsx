@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowRight, ArrowUp, ArrowUpRight, LayoutList, Volume2, VolumeX } from 'lucide-react';
+import { ArrowRight, ArrowUp, ArrowUpRight, LayoutList, PenLine, Volume2, VolumeX } from 'lucide-react';
 import { questionById } from '../data/flow';
 import { frailtyOf } from '../data/frailty';
 import { remainingQuestions, systemPrompt } from '../data/conversation';
@@ -26,34 +26,40 @@ const piece = {
   animate: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.55, ease: EASE_OUT } },
   exit: { opacity: 0, y: -12, scale: 1.01, transition: { duration: 0.3, ease: EASE_IN } },
 };
+const SETTLE = { type: 'spring', stiffness: 280, damping: 32 };
+
 const list = {
   initial: { opacity: 0 },
   animate: { opacity: 1, transition: { staggerChildren: 0.055 } },
   exit: { opacity: 0, transition: { staggerChildren: 0.03, staggerDirection: -1 } },
 };
 
-// Jovana's line arrives token by token, so it is rendered word by word: each one
-// resolves out of a blur instead of the whole paragraph snapping into place.
-// Keyed by index so a word already on screen never re-animates as the next
-// token extends the string.
-function Streamed({ text }) {
-  const words = text.split(' ');
-  return (
-    <>
-      {words.map((word, i) => (
-        <motion.span
-          key={i}
-          className="imm-word"
-          initial={{ opacity: 0, filter: 'blur(10px)' }}
-          animate={{ opacity: 1, filter: 'blur(0px)' }}
-          transition={{ duration: 0.55, ease: EASE_OUT }}
-        >
-          {word}
-          {i < words.length - 1 ? '\u00a0' : ''}
-        </motion.span>
-      ))}
-    </>
-  );
+// Jovana's line is revealed one character at a time from a plain string. It is
+// deliberately not a component per word: once a character is on screen it is
+// just text, so there is nothing left that *can* re-animate. The reveal is also
+// decoupled from the network — tokens arrive in lumps of several words, and
+// pacing off them made the text land in visible chunks.
+const CHAR_MS = 18;
+
+function useTypewriter(full) {
+  const [typed, setTyped] = useState('');
+  const fullRef = useRef(full);
+  fullRef.current = full;
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setTyped((prev) => {
+        const target = fullRef.current;
+        // a new turn replaced the text rather than extending it
+        if (!target.startsWith(prev)) return target.slice(0, 1);
+        if (prev.length >= target.length) return prev; // caught up: no re-render
+        return target.slice(0, prev.length + 1);
+      });
+    }, CHAR_MS);
+    return () => clearInterval(id);
+  }, []);
+
+  return typed;
 }
 
 // One composer for everything typed, instead of a field per question. It is
@@ -87,19 +93,29 @@ function Composer({ placeholder, autoFocus, suggestions = [], onSend }) {
           ))}
         </div>
       )}
-      <div className="imm-composer">
-        <input
-          ref={ref}
-          type="text"
-          value={value}
-          placeholder={placeholder}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && send()}
-        />
-        <button type="button" className="imm-send" disabled={!value.trim()} onClick={send} aria-label="Pošalji">
-          <ArrowUp size={16} strokeWidth={2} />
-        </button>
-      </div>
+      {/* Styled as one more option card — same glass, same padding, same badge
+          slot — so it reads as another row rather than a chat bar bolted on.
+          The only difference is that clicking it puts a cursor in it. */}
+      <label className={`imm-option is-composer${value.trim() ? ' is-selected' : ''}`}>
+        <span className="imm-letter">
+          <PenLine size={13} strokeWidth={1.75} />
+        </span>
+        <span className="imm-option-text">
+          <input
+            ref={ref}
+            type="text"
+            value={value}
+            placeholder={placeholder}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && send()}
+          />
+        </span>
+        {value.trim() && (
+          <button type="button" className="imm-send" onClick={send} aria-label="Pošalji">
+            <ArrowUp size={16} strokeWidth={2} />
+          </button>
+        )}
+      </label>
     </div>
   );
 }
@@ -193,7 +209,7 @@ export default function ImmersiveConversation({
   onExit,
   onFinish,
 }) {
-  const [stage, setStage] = useState('open'); // open | asking | plan
+  const [stage, setStage] = useState('open'); // open | talking | plan
   const [said, setSaid] = useState('');
   const [draft, setDraft] = useState('');
   const [asked, setAsked] = useState(null);
@@ -203,6 +219,15 @@ export default function ImmersiveConversation({
   const [muted, setMuted] = useState(false);
   const history = useRef([]);
   const audioRef = useRef(null);
+
+  const asking = asked ? questionById[asked] : null;
+  // A turn can call tools without writing a sentence, which left the screen
+  // showing options with no question above them. The flow's own wording is the
+  // floor: Jovana's phrasing is preferred, but something is always asked.
+  const line = said || (asking ? Q[asking.id]?.title || asking.title : '');
+  const typed = useTypewriter(line);
+  // the gate everything below the line waits on
+  const doneTyping = !busy && line.length > 0 && typed.length >= line.length;
 
   const client = useMemo(() => createClient(apiKey), [apiKey]);
   const system = useMemo(() => systemPrompt(user), [user]);
@@ -230,6 +255,7 @@ export default function ImmersiveConversation({
       setFollowUp(null);
       setSaid('');
       setDraft('');
+      setStage('talking');
       setBusy(true);
       setError(null);
 
@@ -253,12 +279,9 @@ export default function ImmersiveConversation({
         if (!remainingQuestions(result.answers).length) {
           onPlan(buildPlan(result.answers, result.notes));
           setStage('plan');
-        } else {
-          setStage('asking');
         }
       } catch (e) {
         setError(e?.message || String(e));
-        setStage('asking');
       } finally {
         setBusy(false);
       }
@@ -272,7 +295,7 @@ export default function ImmersiveConversation({
     turn(`(izabrano) ${label}`, { ...answers, [asked]: answer }, notes);
   };
 
-  const question = asked ? questionById[asked] : null;
+  const question = asking;
   const srFrailty =
     frailty && CFS_SR[frailty.level]
       ? { ...frailty, label: CFS_SR[frailty.level].label, blurb: CFS_SR[frailty.level].blurb }
@@ -384,50 +407,53 @@ export default function ImmersiveConversation({
             </motion.div>
           )}
 
-          {busy && (
-            <motion.div key="busy" className="imm-screen" variants={screen} initial="initial" animate="animate" exit="exit">
-              <motion.p className="imm-count" variants={piece}>
-                Jovana
-              </motion.p>
-              <motion.h1 className="imm-title" variants={piece}>
-                {said ? <Streamed text={said} /> : '…'}
-              </motion.h1>
-            </motion.div>
-          )}
-
-          {stage === 'asking' && !busy && (question || followUp) && (
-            <motion.div
-              key={asked || 'follow-up'}
-              className="imm-screen"
-              variants={screen}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-            >
-              <motion.p className="imm-count" variants={piece}>
+          {/* One screen, and it does not unmount between "Jovana is answering"
+              and "here are the cards". Two screens were the bug: both rendered
+              the line, so AnimatePresence threw away the sentence that had just
+              finished typing and animated a fresh copy of it in. */}
+          {stage === 'talking' && (
+            <motion.div key="conversation" className="imm-screen" variants={screen} initial="initial" animate="animate" exit="exit">
+              <motion.p className="imm-count" layout="position" variants={piece}>
                 {SECTION[remaining[0]?.sekcija] || 'Skoro gotovo'}
               </motion.p>
-              {/* Jovana's own words — the flow's phrasing is never shown. */}
-              <motion.h1 className="imm-title" variants={piece}>
-                <Streamed text={said} />
+
+              {/* layout="position" so the line glides as the cards below change
+                  the screen's height, instead of the text itself being scaled */}
+              <motion.h1 className="imm-title" layout="position" transition={SETTLE}>
+                {typed}
+                {!doneTyping && <span className="imm-caret" aria-hidden="true" />}
               </motion.h1>
 
-              {question && <Cards question={question} onPick={pick} />}
+              {/* Nothing below appears until the sentence has finished. */}
+              <AnimatePresence mode="wait">
+                {doneTyping && (question || followUp) && (
+                  <motion.div
+                    key={asked || 'follow-up'}
+                    className="imm-answer"
+                    variants={screen}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                  >
+                    {question && <Cards question={question} onPick={pick} />}
 
-              <motion.div className="imm-composer-slot" variants={piece}>
-                <Composer
-                  autoFocus={!question || question.type === 'inputs'}
-                  suggestions={followUp || []}
-                  placeholder={
-                    question && question.type !== 'inputs'
-                      ? 'ili odgovorite svojim rečima…'
-                      : 'Odgovorite svojim rečima…'
-                  }
-                  onSend={(t) => turn(t, answers, notes)}
-                />
-              </motion.div>
+                    <motion.div className="imm-composer-slot" variants={piece}>
+                      <Composer
+                        autoFocus={!question || question.type === 'inputs'}
+                        suggestions={followUp || []}
+                        placeholder={
+                          question && question.type !== 'inputs'
+                            ? 'ili odgovorite svojim rečima…'
+                            : 'Odgovorite svojim rečima…'
+                        }
+                        onSend={(t) => turn(t, answers, notes)}
+                      />
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-              {error && <motion.p className="imm-error" variants={piece}>{error}</motion.p>}
+              {error && <p className="imm-error">{error}</p>}
             </motion.div>
           )}
 
@@ -437,7 +463,7 @@ export default function ImmersiveConversation({
                 Vaš plan podrške
               </motion.p>
               <motion.h1 className="imm-title" variants={piece}>
-                {said || `Evo plana za ${plan.firstName}`}
+                {typed || `Evo plana za ${plan.firstName}`}
               </motion.h1>
 
               {srFrailty && (
