@@ -39,7 +39,12 @@ const list = {
 // just text, so there is nothing left that *can* re-animate. The reveal is also
 // decoupled from the network — tokens arrive in lumps of several words, and
 // pacing off them made the text land in visible chunks.
-const CHAR_MS = 18;
+const CHAR_MS = 26;
+// How many characters at the write head are still resolving. They carry a blur
+// that clears as more arrive, so the line reads as coming into focus rather
+// than being stamped out. Purely CSS on ~7 spans — nothing animates once a
+// character has settled behind the head.
+const TAIL = 7;
 
 function useTypewriter(full) {
   const [typed, setTyped] = useState('');
@@ -60,6 +65,29 @@ function useTypewriter(full) {
   }, []);
 
   return typed;
+}
+
+function Line({ text, done }) {
+  if (done) return text;
+  const split = Math.max(0, text.length - TAIL);
+  const head = text.slice(0, split);
+  const tail = text.slice(split);
+  return (
+    <>
+      {head}
+      {tail.split('').map((ch, i) => {
+        const d = tail.length - i; // 1 at the settled end, TAIL at the head
+        return (
+          <span
+            key={split + i}
+            style={{ filter: `blur(${(d / TAIL) * 5}px)`, opacity: 1 - (d / TAIL) * 0.55 }}
+          >
+            {ch}
+          </span>
+        );
+      })}
+    </>
+  );
 }
 
 // One composer for everything typed, instead of a field per question. It is
@@ -120,7 +148,7 @@ function Composer({ placeholder, autoFocus, suggestions = [], onSend }) {
   );
 }
 
-function Cards({ question, onPick }) {
+function Cards({ question, composer, onPick }) {
   const sr = Q[question.id] || {};
   const [ids, setIds] = useState([]);
   const [values, setValues] = useState({});
@@ -150,6 +178,7 @@ function Cards({ question, onPick }) {
             </span>
           </motion.button>
         ))}
+        {composer}
       </motion.div>
     );
   }
@@ -173,7 +202,10 @@ function Cards({ question, onPick }) {
             </span>
           </motion.button>
         ))}
+        {composer}
       </motion.div>
+      {/* the confirm sits below the composer: it commits the whole answer,
+          typed row included, so it cannot come before it */}
       <motion.div className="imm-actions" variants={piece}>
         <Button
           variant="primary"
@@ -412,17 +444,20 @@ export default function ImmersiveConversation({
               the line, so AnimatePresence threw away the sentence that had just
               finished typing and animated a fresh copy of it in. */}
           {stage === 'talking' && (
-            <motion.div key="conversation" className="imm-screen" variants={screen} initial="initial" animate="animate" exit="exit">
-              <motion.p className="imm-count" layout="position" variants={piece}>
+            <motion.div key="conversation" className="imm-screen is-conversation" variants={screen} initial="initial" animate="animate" exit="exit">
+              <motion.p className="imm-count" variants={piece}>
                 {SECTION[remaining[0]?.sekcija] || 'Skoro gotovo'}
               </motion.p>
 
-              {/* layout="position" so the line glides as the cards below change
-                  the screen's height, instead of the text itself being scaled */}
-              <motion.h1 className="imm-title" layout="position" transition={SETTLE}>
-                {typed}
-                {!doneTyping && <span className="imm-caret" aria-hidden="true" />}
-              </motion.h1>
+              {/* The line is anchored: the box reserves two lines' height and
+                  centres within it, so a one-line question sits in the middle
+                  and the cards below never move when the next one is longer. */}
+              <h1 className="imm-title imm-line">
+                <span>
+                  <Line text={typed} done={doneTyping} />
+                  {!doneTyping && <span className="imm-caret" aria-hidden="true" />}
+                </span>
+              </h1>
 
               {/* Nothing below appears until the sentence has finished. */}
               <AnimatePresence mode="wait">
@@ -435,20 +470,34 @@ export default function ImmersiveConversation({
                     animate="animate"
                     exit="exit"
                   >
-                    {question && <Cards question={question} onPick={pick} />}
-
-                    <motion.div className="imm-composer-slot" variants={piece}>
-                      <Composer
-                        autoFocus={!question || question.type === 'inputs'}
-                        suggestions={followUp || []}
-                        placeholder={
-                          question && question.type !== 'inputs'
-                            ? 'ili odgovorite svojim rečima…'
-                            : 'Odgovorite svojim rečima…'
+                    {question ? (
+                      <Cards
+                        question={question}
+                        onPick={pick}
+                        composer={
+                          <motion.div className="imm-composer-slot" variants={piece}>
+                            <Composer
+                              autoFocus={question.type === 'inputs'}
+                              placeholder={
+                                question.type !== 'inputs'
+                                  ? 'ili odgovorite svojim rečima…'
+                                  : 'Odgovorite svojim rečima…'
+                              }
+                              onSend={(t) => turn(t, answers, notes)}
+                            />
+                          </motion.div>
                         }
-                        onSend={(t) => turn(t, answers, notes)}
                       />
-                    </motion.div>
+                    ) : (
+                      <motion.div className="imm-composer-slot" variants={piece}>
+                        <Composer
+                          autoFocus
+                          suggestions={followUp || []}
+                          placeholder="Odgovorite svojim rečima…"
+                          onSend={(t) => turn(t, answers, notes)}
+                        />
+                      </motion.div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>

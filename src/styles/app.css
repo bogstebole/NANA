@@ -3496,3 +3496,29 @@ input {
 .imm-send:not(:disabled):hover {
   transform: scale(1.05);
 }
+
+/* ---------- Conversation screen: the line stays put ---------- */
+
+/* The stage centres its child, so every card that mounted or unmounted
+   re-centred the whole block and the question drifted. Anchoring it near the
+   top means the cards grow downward and the line never moves. */
+.imm-screen.is-conversation {
+  align-self: flex-start;
+  margin-top: 20vh;
+}
+
+/* Two lines of height are reserved and the text centres inside them, so a
+   one-line question sits mid-box and a two-line one fills it — either way what
+   follows starts at the same place. */
+.imm-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(2 * 34px);
+}
+
+/* the blurred write-head needs room to bleed rather than clip */
+.imm-line span span {
+  display: inline-block;
+  will-change: filter;
+}
