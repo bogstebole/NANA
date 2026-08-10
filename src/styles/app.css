@@ -3089,3 +3089,83 @@ input {
   font-weight: var(--font-normal);
   color: rgba(76, 34, 18, 0.42);
 }
+
+/* ---------- AI conversation variant ---------- */
+
+.key-field {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+}
+
+.key-field svg {
+  flex-shrink: 0;
+  color: var(--text-disabled);
+}
+
+.key-field input {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-leading);
+  color: var(--text-primary);
+  letter-spacing: 0.04em;
+}
+
+.key-warning {
+  padding: var(--spacing-3);
+  border-radius: var(--radius-lg);
+  background: var(--status-wait-bg);
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+  color: var(--status-wait-fg);
+}
+
+/* the answer cards Claude puts on screen when it calls `ask` */
+.conv-answer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.conv-answer .select-card {
+  width: 100%;
+}
+
+.conv-error {
+  display: flex;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3);
+  border-radius: var(--radius-2xl);
+  background: var(--status-no-bg);
+}
+
+.conv-error > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--status-no-fg);
+}
+
+.conv-error-title {
+  font-size: var(--text-xs-size);
+  line-height: var(--text-xs-leading);
+  font-weight: var(--font-medium);
+  color: var(--status-no-fg);
+}
+
+.conv-error-note {
+  margin-top: 2px;
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+  color: var(--text-secondary);
+}
+
+.conv-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-3);
+}

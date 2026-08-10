@@ -14,6 +14,9 @@ import CopilotPanel from './components/CopilotPanel';
 import PaywallModal from './components/PaywallModal';
 import PlanDetail from './screens/PlanDetail';
 import Immersive from './screens/Immersive';
+import Conversation from './screens/Conversation';
+import ApiKeyPanel from './components/ApiKeyPanel';
+import { loadKey, saveKey } from './lib/claudeChat';
 import { reconcile } from './data/dependencies';
 import { statusCounts } from './data/bookings';
 import { caregivers } from './data/carePlan';
@@ -40,7 +43,10 @@ export default function App() {
   const [chatListOpen, setChatListOpen] = useState(true);
   const [planListOpen, setPlanListOpen] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState('live');
-  const [variant, setVariant] = useState('classic'); // classic | immersive
+  const [variant, setVariant] = useState('classic'); // classic | immersive | ai
+  // the AI variant runs against the developer's own key, kept in this browser
+  const [apiKey, setApiKey] = useState(loadKey);
+  const [askingKey, setAskingKey] = useState(false);
   const [run, setRun] = useState(0); // remounts the flow on restart
 
   const onPlan = useCallback((p) => setPlan(p), []);
@@ -116,7 +122,8 @@ export default function App() {
 
   const startVariant = (next) => {
     setVariant(next);
-    if (next === 'immersive') {
+    if (next === 'ai' && !apiKey) setAskingKey(true);
+    if (next !== 'classic') {
       setRightPanel(null);
       setActiveThread('live');
       setView('chat');
@@ -195,17 +202,49 @@ export default function App() {
               onArtifacts={() => setRightPanel('plan')}
               onNewChat={newChat}
             />
-            <Chat
-              key={`chat-${run}`}
-              user={user}
-              answers={answers}
-              onAnswer={onAnswer}
-              plan={plan}
-              onPlan={onPlan}
-              unlocked={unlocked}
-              onOpenPlan={() => setRightPanel('plan')}
-              onSelectCaregiver={selectCaregiver}
-            />
+            {variant === 'ai' ? (
+              askingKey || !apiKey ? (
+                <ApiKeyPanel
+                  initial={apiKey}
+                  onSave={(k) => {
+                    saveKey(k);
+                    setApiKey(k);
+                    setAskingKey(false);
+                  }}
+                  onCancel={() => {
+                    setAskingKey(false);
+                    setVariant('classic');
+                  }}
+                />
+              ) : (
+                <Conversation
+                  key={`ai-${run}`}
+                  user={user}
+                  answers={answers}
+                  onAnswer={onAnswer}
+                  apiKey={apiKey}
+                  plan={plan}
+                  onPlan={onPlan}
+                  unlocked={unlocked}
+                  onOpenPlan={() => setRightPanel('plan')}
+                  onSelectCaregiver={selectCaregiver}
+                  onChangeKey={() => setAskingKey(true)}
+                  onFallback={() => setVariant('classic')}
+                />
+              )
+            ) : (
+              <Chat
+                key={`chat-${run}`}
+                user={user}
+                answers={answers}
+                onAnswer={onAnswer}
+                plan={plan}
+                onPlan={onPlan}
+                unlocked={unlocked}
+                onOpenPlan={() => setRightPanel('plan')}
+                onSelectCaregiver={selectCaregiver}
+              />
+            )}
           </div>
 
           {view === 'chat' && openThread && (

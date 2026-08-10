@@ -88,10 +88,10 @@ The immersive variant has the same three states as full screens — review, warn
 
 ## Questionnaire variants
 
-The nav carries a **Classic / Immersive** switch. Both ask the same questions and
-write into the same `answers` in `App`, so you can switch mid-flow: answers given in
-one show up in the other, and the immersive variant resumes at the first unanswered
-question rather than restarting.
+The nav carries a **Classic / Immersive / AI** switch. All three ask the same questions
+and write into the same `answers` in `App`, so you can switch mid-flow: answers given in
+one show up in the others, and each resumes at the first unanswered question rather than
+restarting. The AI variant has its own section at the end of this file.
 
 **Immersive** is a fullscreen take: one question at a time, glass cards over drifting
 clouds, with generative ambient audio.
@@ -213,3 +213,57 @@ Icons are [lucide-react](https://lucide.dev) at `size={14} strokeWidth={1.75}`, 
 - `PhotoCarousel` is a Material 3 multi-browse carousel that auto-advances every 2.8s: an item enters small on the right, grows into the hero slot, then shrinks away to the left. Slot widths come from the Figma layout; images are fixed-width and center-cropped by their slot, so narrowing crops rather than squashes. Honors `prefers-reduced-motion`.
 
 Note: `?forceRaf` URL param is a test hook that keeps animations running in headless/background tabs — irrelevant for normal use.
+
+## Third variant: the AI conversation
+
+`Classic / Immersive / AI` in the nav. The AI variant asks the **same questions**
+and writes the **same answers** — Jovana just asks them herself, in Serbian.
+
+**The division of labour is the whole design: Claude owns the words, `flow.js`
+owns the data.** Claude decides what to ask next and how to phrase it; the
+question ids, option ids and answer shapes are untouched, because the frailty
+scoring, the branching and the care plan all read them. A model free to invent
+options would produce answers that score nothing.
+
+Two tools, in `src/data/conversation.js`:
+
+- `ask(questionId)` — the client renders that question's real cards from `flow.js`
+  underneath the message. Tapping one commits the answer directly, no round trip.
+- `record_answers([...])` — for anything typed. This is where the value is: one
+  sentence can fill several slots at once. *"Pala je dvaput prošle godine i kreće
+  se uz štap"* records **falls** and **mobility** together, and neither is ever
+  asked again. In the questionnaire that is two screens.
+
+The free-text composer is live at every step, so the user is never trapped in the
+cards.
+
+`stateMessage()` is sent each turn as a `role: "system"` message inside
+`messages[]` rather than folded into the system prompt — the remaining questions
+change as the band moves, and this way that churn doesn't invalidate the cached
+prefix above it.
+
+**The support section is withheld until daily life is fully answered.** The
+frailty estimate exists from the first answer, but a band derived from two
+answers is not one to branch on — the model would ask a branch question, the band
+would move as the rest landed, and `reconcile` would drop the answer it had just
+collected. The other two variants get this for free by walking the steps in order;
+here the model chooses, so it is enforced in `remainingQuestions()`.
+
+Serbian copy is an overlay (`src/data/flow.sr.js`), not a rewrite of `flow.js` —
+the other two variants stay English to match Figma, and the ids must not move.
+
+### Running it
+
+Bring your own key: the app asks for one and keeps it in `localStorage`, so
+whoever pulls the repo uses their own and nothing secret is committed.
+
+> **Local demo only.** A key held in the browser is readable by anything running
+> on the page. Shipped, this call belongs behind a server.
+
+Model config, in `src/lib/claudeChat.js`: `claude-opus-5`, **thinking on** at
+`low` effort. Thinking stays on deliberately — disabling it on this model lets
+tool calls arrive as plain text, so the turn succeeds, the call never runs,
+nothing errors, and in a loop that text poisons later turns. For a design that
+hangs entirely on tool use that is the worst available failure. `low` effort is
+the cheap lever instead. Server-side `fallbacks: "default"` is on, so a declined
+request re-runs on Anthropic's recommended fallback rather than dying.

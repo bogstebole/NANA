@@ -180,22 +180,21 @@ export default function AppNav({
         <div className="nav-variant">
           <span className="nav-variant-label">Questionnaire</span>
           <div className="segmented" role="group" aria-label="Questionnaire variant">
-            <button
-              type="button"
-              className={variant === 'classic' ? 'is-active' : ''}
-              onClick={() => onVariant('classic')}
-              aria-pressed={variant === 'classic'}
-            >
-              Classic
-            </button>
-            <button
-              type="button"
-              className={variant === 'immersive' ? 'is-active' : ''}
-              onClick={() => onVariant('immersive')}
-              aria-pressed={variant === 'immersive'}
-            >
-              Immersive
-            </button>
+            {[
+              ['classic', 'Classic'],
+              ['immersive', 'Immersive'],
+              ['ai', 'AI'],
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                className={variant === id ? 'is-active' : ''}
+                onClick={() => onVariant(id)}
+                aria-pressed={variant === id}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
 
