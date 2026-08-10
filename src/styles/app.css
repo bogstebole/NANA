@@ -2443,11 +2443,52 @@ input {
 }
 
 /* the same scale, inside the immersive variant */
+/* The scale, with everything needed to read it: what it is called, where this
+   person sits on it, which way it runs, and what that level means. */
+.imm-scale {
+  width: 100%;
+  margin-top: var(--spacing-5);
+}
+
+.imm-scale-name {
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-leading);
+  color: #7d6f63;
+}
+
+.imm-scale-name strong {
+  font-weight: var(--font-medium);
+  color: #463d35;
+}
+
+.imm-scale-ends {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 16px;
+  color: #a2917f;
+}
+
+.imm-scale-blurb {
+  margin-top: var(--spacing-3);
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-leading);
+  color: #7d6f63;
+}
+
+.imm-scale-note {
+  margin-top: var(--spacing-2);
+  font-size: 11px;
+  line-height: 16px;
+  color: #a2917f;
+}
+
 .imm-cfs {
   display: flex;
   gap: 6px;
   width: 100%;
-  margin-top: var(--spacing-4);
+  margin-top: var(--spacing-3);
 }
 
 .imm-cfs-step {
@@ -3273,20 +3314,33 @@ input {
   gap: var(--spacing-2);
 }
 
+/* These are answers, one tap away — they have to feel pressable. They had a
+   single faint background change and nothing else: no border response, no
+   shadow, nothing under the finger. */
 .imm-suggestion {
   padding: var(--spacing-2) var(--spacing-3);
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.7);
   background: rgba(255, 255, 255, 0.45);
   backdrop-filter: blur(8px);
+  box-shadow: 0 1px 2px rgba(76, 34, 18, 0.05);
   font-size: var(--text-xs-size);
   line-height: 18px;
   color: var(--color-primary-900);
-  transition: background 0.2s ease;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .imm-suggestion:hover {
-  background: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(253, 155, 119, 0.55);
+  box-shadow: 0 4px 12px rgba(76, 34, 18, 0.09);
+}
+
+.imm-suggestion:active {
+  background: rgba(255, 244, 238, 0.95);
+  border-color: var(--primary);
+  box-shadow: 0 1px 2px rgba(76, 34, 18, 0.05);
 }
 
 /* an input rendered as one of the glass cards */
@@ -3455,26 +3509,15 @@ input {
   color: rgba(76, 34, 18, 0.42);
 }
 
-.imm-send {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* The send control is the shared Button — primary, icon-only. All that is left
+   here is the round shape and a size that matches the badge on the other side
+   of the card; it used to be a hand-rolled button repeating what Button
+   already does. */
+.imm-send.btn {
   flex-shrink: 0;
   width: 32px;
   height: 32px;
   border-radius: 999px;
-  background: var(--primary);
-  color: var(--primary-foreground);
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.imm-send:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
-
-.imm-send:not(:disabled):hover {
-  transform: scale(1.05);
 }
 
 /* ---------- Conversation screen: the line stays put ---------- */
@@ -3497,6 +3540,52 @@ input {
   align-items: center;
   justify-content: center;
   min-height: calc(3 * 34px);
+}
+
+/* Jovana thinking, in the same box the answer will occupy. Nothing was shown
+   at all before: the screen sat empty for the whole of a model turn, which
+   reads as broken rather than as waiting. */
+.imm-thinking {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-leading);
+  font-weight: var(--font-normal);
+  color: #7d6f63;
+}
+
+.imm-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--primary);
+  opacity: 0.35;
+  animation: imm-think 1.15s ease-in-out infinite;
+}
+
+.imm-dot:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.imm-dot:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+.imm-thinking-text {
+  margin-left: var(--spacing-2);
+}
+
+@keyframes imm-think {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 0.9;
+    transform: translateY(-3px);
+  }
 }
 
 /* A word is the unit that wraps: the characters inside it are inline-blocks

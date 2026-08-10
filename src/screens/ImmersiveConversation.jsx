@@ -148,9 +148,16 @@ function Composer({ placeholder, autoFocus, suggestions = [], onSend }) {
       {suggestions.length > 0 && (
         <div className="imm-suggestions">
           {suggestions.slice(0, 4).map((sug) => (
-            <button key={sug} type="button" className="imm-suggestion" onClick={() => onSend(sug)}>
+            <motion.button
+              key={sug}
+              type="button"
+              className="imm-suggestion"
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => onSend(sug)}
+            >
               {sug}
-            </button>
+            </motion.button>
           ))}
         </div>
       )}
@@ -172,9 +179,9 @@ function Composer({ placeholder, autoFocus, suggestions = [], onSend }) {
           />
         </span>
         {value.trim() && (
-          <button type="button" className="imm-send" onClick={send} aria-label="Pošalji">
+          <Button variant="primary" iconOnly className="imm-send" onClick={send} aria-label="Pošalji">
             <ArrowUp size={16} strokeWidth={2} />
-          </button>
+          </Button>
         )}
       </label>
     </div>
@@ -292,7 +299,10 @@ export default function ImmersiveConversation({
   // A turn can call tools without writing a sentence, which left the screen
   // showing options with no question above them. The flow's own wording is the
   // floor: Jovana's phrasing is preferred, but something is always asked.
-  const line = said || (asking ? Q[asking.id]?.title || asking.title : '');
+  //
+  // Empty while she is still writing: the reveal only ever runs on a sentence
+  // that is already complete, so its layout cannot change under it.
+  const line = busy ? '' : said || (asking ? Q[asking.id]?.title || asking.title : '');
   const typed = useTypewriter(line);
   // the gate everything below the line waits on
   const doneTyping = !busy && line.length > 0 && typed.length >= line.length;
@@ -328,20 +338,28 @@ export default function ImmersiveConversation({
       setError(null);
 
       try {
+        // Tokens are collected here rather than pushed to the screen as they
+        // arrive. Revealing a sentence that is still growing means re-wrapping
+        // and re-centring it under the reader for as long as the model keeps
+        // writing — seconds, with a real stream. Nothing is shown until the
+        // turn is finished, and then it is typed out at a fixed layout. The
+        // wait is not empty: that is what the thinking indicator is for.
+        let spoken = '';
         const result = await runTurn({
           client,
           system,
           messages: history.current,
           answers: seed,
           notes: seedNotes,
-          // The screen shows one line at a time, so text accumulates into a
-          // single sentence rather than a transcript.
-          onText: (delta) => setSaid((s) => s + delta),
+          onText: (delta) => {
+            spoken += delta;
+          },
           onAnswer,
           onNote,
           onAsk: (id) => setAsked(id),
           onFollowUp: (suggestions) => setFollowUp(suggestions),
         });
+        setSaid(spoken.trim());
         history.current = result.messages;
         if (!result.messages.some((m) => m.role === 'assistant')) return;
         if (!remainingQuestions(result.answers).length) {
@@ -485,17 +503,31 @@ export default function ImmersiveConversation({
                 {SECTION[remaining[0]?.sekcija] || 'Skoro gotovo'}
               </motion.p>
 
-              {/* The line is anchored: the box reserves two lines' height and
+              {/* The line is anchored: the box reserves three lines' height and
                   centres within it, so a one-line question sits in the middle
-                  and the cards below never move when the next one is longer. */}
+                  and the cards below never move when the next one is longer.
+                  The thinking indicator lives in the same box, so the wait and
+                  the answer occupy exactly the same space. */}
               <h1 className="imm-title imm-line">
-                {/* No caret. It used to sit after the last revealed character;
-                    now the sentence is laid out in full from the start, so the
-                    end of the element is the end of text nobody can see yet.
-                    The blurred head is the write position, and a better one. */}
-                <span>
-                  <Line full={line} shown={typed.length} />
-                </span>
+                {busy ? (
+                  <span className="imm-thinking" role="status">
+                    <span className="imm-dot" />
+                    <span className="imm-dot" />
+                    <span className="imm-dot" />
+                    <span className="imm-thinking-text">Jovana razmišlja…</span>
+                  </span>
+                ) : (
+                  /* No caret. It used to sit after the last revealed character;
+                     the sentence is laid out in full from the start, so the end
+                     of the element is the end of text nobody can see yet. The
+                     blurred head is the write position, and a better one.
+                     Once the reveal is finished `shown` runs past the end so
+                     the head clears — without that the last few characters kept
+                     their blur for as long as the question stayed up. */
+                  <span>
+                    <Line full={line} shown={doneTyping ? line.length + TAIL : typed.length} />
+                  </span>
+                )}
               </h1>
 
               {/* Nothing below appears until the sentence has finished. */}
@@ -554,19 +586,40 @@ export default function ImmersiveConversation({
                 {typed || `Evo plana za ${plan.firstName}`}
               </motion.h1>
 
+              {/* Nine numbered boxes with one of them lit meant nothing on
+                  their own — no name for the scale, no reading of the level,
+                  no direction. The other variant has always said all three;
+                  this one showed the row bare. */}
               {srFrailty && (
-                <motion.div className="imm-cfs" variants={list}>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((l) => (
-                    <motion.span
-                      key={l}
-                      variants={piece}
-                      className={`imm-cfs-step${l === srFrailty.level ? ' is-current' : ''}${
-                        l < srFrailty.level ? ' is-passed' : ''
-                      }`}
-                    >
-                      {l}
-                    </motion.span>
-                  ))}
+                <motion.div className="imm-scale" variants={piece}>
+                  <motion.p className="imm-scale-name" variants={piece}>
+                    Klinička skala krhkosti — nivo {srFrailty.level} od 9:{' '}
+                    <strong>{srFrailty.label}</strong>
+                  </motion.p>
+                  <motion.div className="imm-cfs" variants={list}>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((l) => (
+                      <motion.span
+                        key={l}
+                        variants={piece}
+                        className={`imm-cfs-step${l === srFrailty.level ? ' is-current' : ''}${
+                          l < srFrailty.level ? ' is-passed' : ''
+                        }`}
+                      >
+                        {l}
+                      </motion.span>
+                    ))}
+                  </motion.div>
+                  <motion.p className="imm-scale-ends" variants={piece}>
+                    <span>1 — potpuno samostalna</span>
+                    <span>9 — na kraju života</span>
+                  </motion.p>
+                  <motion.p className="imm-scale-blurb" variants={piece}>
+                    {srFrailty.blurb}
+                  </motion.p>
+                  <motion.p className="imm-scale-note" variants={piece}>
+                    Procena je iz vaših odgovora i služi da uskladimo podršku — nije
+                    dijagnoza i ne zamenjuje lekara.
+                  </motion.p>
                 </motion.div>
               )}
 
