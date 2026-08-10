@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowRight, ArrowUpRight, LayoutList, PenLine, Volume2, VolumeX } from 'lucide-react';
+import { ArrowRight, ArrowUp, ArrowUpRight, LayoutList, Volume2, VolumeX } from 'lucide-react';
 import { questionById } from '../data/flow';
 import { frailtyOf } from '../data/frailty';
 import { remainingQuestions, systemPrompt } from '../data/conversation';
@@ -32,61 +32,75 @@ const list = {
   exit: { opacity: 0, transition: { staggerChildren: 0.03, staggerDirection: -1 } },
 };
 
-// The escape hatch that makes the cards a shortcut rather than a cage: it is on
-// every screen, so nothing the person wants to say is ever unsayable.
-function FreeText({ label, placeholder, autoFocus, rows = 1, suggestions = [], onSend }) {
+// Jovana's line arrives token by token, so it is rendered word by word: each one
+// resolves out of a blur instead of the whole paragraph snapping into place.
+// Keyed by index so a word already on screen never re-animates as the next
+// token extends the string.
+function Streamed({ text }) {
+  const words = text.split(' ');
+  return (
+    <>
+      {words.map((word, i) => (
+        <motion.span
+          key={i}
+          className="imm-word"
+          initial={{ opacity: 0, filter: 'blur(10px)' }}
+          animate={{ opacity: 1, filter: 'blur(0px)' }}
+          transition={{ duration: 0.55, ease: EASE_OUT }}
+        >
+          {word}
+          {i < words.length - 1 ? '\u00a0' : ''}
+        </motion.span>
+      ))}
+    </>
+  );
+}
+
+// One composer for everything typed, instead of a field per question. It is
+// always there, so the cards read as a shortcut rather than the only way through
+// — and the questions that used to be three stacked input cards are now just
+// answered in a sentence, which Jovana pulls the fields out of.
+function Composer({ placeholder, autoFocus, suggestions = [], onSend }) {
   const [value, setValue] = useState('');
-  const [open, setOpen] = useState(autoFocus);
   const ref = useRef(null);
 
   useEffect(() => {
-    if (open) setTimeout(() => ref.current?.focus({ preventScroll: true }), 250);
-  }, [open]);
-
-  if (!open) {
-    return (
-      <motion.button type="button" className="imm-write-toggle" variants={piece} onClick={() => setOpen(true)}>
-        <PenLine size={13} strokeWidth={1.75} />
-        {label}
-      </motion.button>
-    );
-  }
+    if (autoFocus) setTimeout(() => ref.current?.focus({ preventScroll: true }), 650);
+  }, [autoFocus]);
 
   const send = () => {
     const t = value.trim();
-    if (t) onSend(t);
+    if (t) {
+      setValue('');
+      onSend(t);
+    }
   };
 
   return (
-    <motion.div className="imm-write" variants={piece}>
+    <div className="imm-composer-wrap">
       {suggestions.length > 0 && (
         <div className="imm-suggestions">
-          {suggestions.slice(0, 4).map((s) => (
-            <button key={s} type="button" className="imm-suggestion" onClick={() => onSend(s)}>
-              {s}
+          {suggestions.slice(0, 4).map((sug) => (
+            <button key={sug} type="button" className="imm-suggestion" onClick={() => onSend(sug)}>
+              {sug}
             </button>
           ))}
         </div>
       )}
-      <textarea
-        ref={ref}
-        rows={rows}
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            send();
-          }
-        }}
-      />
-      <div className="imm-write-actions">
-        <Button variant="primary" size="lg" disabled={!value.trim()} onClick={send}>
-          Pošalji
-        </Button>
+      <div className="imm-composer">
+        <input
+          ref={ref}
+          type="text"
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && send()}
+        />
+        <button type="button" className="imm-send" disabled={!value.trim()} onClick={send} aria-label="Pošalji">
+          <ArrowUp size={16} strokeWidth={2} />
+        </button>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -95,40 +109,10 @@ function Cards({ question, onPick }) {
   const [ids, setIds] = useState([]);
   const [values, setValues] = useState({});
 
-  if (question.type === 'inputs') {
-    const ready = question.fields.every((f) => f.optional || (values[f.id] || '').trim());
-    return (
-      <>
-        <motion.div className="imm-options" variants={list}>
-          {question.fields.map((f) => (
-            <motion.label className="imm-option is-field" key={f.id} variants={piece}>
-              <span className="imm-field-name">{sr.fields?.[f.id] || f.label}</span>
-              <input
-                type="text"
-                value={values[f.id] || ''}
-                onChange={(e) => setValues((v) => ({ ...v, [f.id]: e.target.value }))}
-              />
-            </motion.label>
-          ))}
-        </motion.div>
-        <motion.div className="imm-actions" variants={piece}>
-          <Button
-            variant="primary"
-            size="lg"
-            disabled={!ready}
-            onClick={() =>
-              onPick(
-                { values },
-                question.fields.map((f) => values[f.id]).filter(Boolean).join(', ')
-              )
-            }
-          >
-            Dalje
-          </Button>
-        </motion.div>
-      </>
-    );
-  }
+  // `inputs` questions render nothing. Three stacked field cards were the last
+  // piece of questionnaire left in here; the person answers in a sentence and
+  // Jovana maps it onto the fields.
+  if (question.type === 'inputs') return null;
 
   const label = (o) => sr.options?.[o.id] || o.title;
 
@@ -211,6 +195,7 @@ export default function ImmersiveConversation({
 }) {
   const [stage, setStage] = useState('open'); // open | asking | plan
   const [said, setSaid] = useState('');
+  const [draft, setDraft] = useState('');
   const [asked, setAsked] = useState(null);
   const [followUp, setFollowUp] = useState(null); // string[] of suggestions
   const [busy, setBusy] = useState(false);
@@ -244,6 +229,7 @@ export default function ImmersiveConversation({
       setAsked(null);
       setFollowUp(null);
       setSaid('');
+      setDraft('');
       setBusy(true);
       setError(null);
 
@@ -342,12 +328,30 @@ export default function ImmersiveConversation({
                 O kome se radi, šta vas brine, šta ste već probali — kako god vam je lakše.
                 Ostalo ću pitati usput.
               </motion.p>
-              <FreeText
-                autoFocus
-                rows={5}
-                placeholder="Majka ima 84 godine i živi sama u Vračaru. Pala je dvaput ove godine…"
-                onSend={(t) => turn(t, answers, notes)}
-              />
+              <motion.div className="imm-write" variants={piece}>
+                <textarea
+                  rows={5}
+                  value={draft}
+                  placeholder="Majka ima 84 godine i živi sama u Vračaru. Pala je dvaput ove godine…"
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      if (draft.trim()) turn(draft.trim(), answers, notes);
+                    }
+                  }}
+                />
+                <div className="imm-write-actions">
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    disabled={!draft.trim()}
+                    onClick={() => turn(draft.trim(), answers, notes)}
+                  >
+                    Pošalji
+                  </Button>
+                </div>
+              </motion.div>
 
               <motion.p className="imm-starters-label" variants={piece}>
                 ili krenite od nekog od ovih
@@ -386,7 +390,7 @@ export default function ImmersiveConversation({
                 Jovana
               </motion.p>
               <motion.h1 className="imm-title" variants={piece}>
-                {said || '…'}
+                {said ? <Streamed text={said} /> : '…'}
               </motion.h1>
             </motion.div>
           )}
@@ -405,19 +409,23 @@ export default function ImmersiveConversation({
               </motion.p>
               {/* Jovana's own words — the flow's phrasing is never shown. */}
               <motion.h1 className="imm-title" variants={piece}>
-                {said}
+                <Streamed text={said} />
               </motion.h1>
 
               {question && <Cards question={question} onPick={pick} />}
 
-              <FreeText
-                label="Napiši svojim rečima"
-                autoFocus={!question}
-                rows={question ? 1 : 3}
-                suggestions={followUp || []}
-                placeholder={question ? 'Ili odgovorite svojim rečima…' : 'Odgovorite svojim rečima…'}
-                onSend={(t) => turn(t, answers, notes)}
-              />
+              <motion.div className="imm-composer-slot" variants={piece}>
+                <Composer
+                  autoFocus={!question || question.type === 'inputs'}
+                  suggestions={followUp || []}
+                  placeholder={
+                    question && question.type !== 'inputs'
+                      ? 'ili odgovorite svojim rečima…'
+                      : 'Odgovorite svojim rečima…'
+                  }
+                  onSend={(t) => turn(t, answers, notes)}
+                />
+              </motion.div>
 
               {error && <motion.p className="imm-error" variants={piece}>{error}</motion.p>}
             </motion.div>

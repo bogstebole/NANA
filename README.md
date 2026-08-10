@@ -232,8 +232,17 @@ Jovana picks it up like anything else they could have typed. A line about
 emergencies sits below them: a chat is the wrong channel for a fall, and saying so
 costs nothing.
 
-**2. "What if the options don't contain what I'd say?"** A free-text field sits on
-every screen, under the cards — the cards are a shortcut, never a cage.
+**2. "What if the options don't contain what I'd say?"** One composer sits under
+every screen, always — the cards are a shortcut, never a cage. There is no
+per-field input: `inputs` questions (name/age/city, your name/relation/phone,
+goal/worry) render **no cards at all**. Three stacked field cards were the last
+piece of questionnaire left in the variant; now the person answers in a sentence
+— *"Bogdan, sin, 063 555 210"* — and Jovana maps it onto the fields. Select
+questions keep their cards, multi-selects keep their "other" row.
+
+Jovana's line arrives **word by word, each resolving out of a 10px blur** rather
+than the paragraph snapping in. Words are keyed by index, so one already on
+screen never re-animates as the next token extends the string.
 
 **3. "Then the next question has to adapt."** Two tools exist for exactly this:
 
