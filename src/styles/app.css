@@ -3169,3 +3169,141 @@ input {
   gap: var(--spacing-2);
   margin-top: var(--spacing-3);
 }
+
+/* ---------- Immersive AI conversation ---------- */
+
+/* the API-key gate has to sit over the fullscreen variant, not behind it */
+.key-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--primary-subtle-highlight);
+}
+
+/* the blank page and the always-present escape hatch */
+.imm-write {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-4);
+}
+
+.imm-write textarea {
+  width: 100%;
+  padding: var(--spacing-4);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: var(--radius-2xl);
+  background: rgba(255, 255, 255, 0.52);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: 0 8px 32px rgba(122, 92, 70, 0.08);
+  font-family: inherit;
+  font-size: var(--text-base-size);
+  line-height: 26px;
+  color: var(--color-primary-900);
+  resize: none;
+  outline: none;
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
+
+.imm-write textarea:focus {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(253, 155, 119, 0.6);
+}
+
+.imm-write textarea::placeholder {
+  color: rgba(76, 34, 18, 0.38);
+}
+
+.imm-write-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* collapsed state — a quiet offer, not a second composer */
+.imm-write-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1-5);
+  margin-top: var(--spacing-4);
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+  color: var(--color-primary-800);
+  opacity: 0.6;
+  transition: opacity 0.2s ease, background 0.2s ease;
+}
+
+.imm-write-toggle:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.imm-skip {
+  margin-top: var(--spacing-3);
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+  color: var(--color-primary-800);
+  opacity: 0.5;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.imm-skip:hover {
+  opacity: 0.85;
+}
+
+/* soft chips Jovana can offer alongside her own follow-up question */
+.imm-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+}
+
+.imm-suggestion {
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(8px);
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+  color: var(--color-primary-900);
+  transition: background 0.2s ease;
+}
+
+.imm-suggestion:hover {
+  background: rgba(255, 255, 255, 0.75);
+}
+
+/* an input rendered as one of the glass cards */
+.imm-option.is-field {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  cursor: text;
+}
+
+.imm-field-name {
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--color-primary-800);
+  opacity: 0.6;
+}
+
+.imm-option.is-field input {
+  width: 100%;
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-leading);
+  font-weight: var(--font-medium);
+  color: var(--color-primary-900);
+}
+
+.imm-error {
+  margin-top: var(--spacing-3);
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+  color: var(--status-no-fg);
+}

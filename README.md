@@ -214,56 +214,66 @@ Icons are [lucide-react](https://lucide.dev) at `size={14} strokeWidth={1.75}`, 
 
 Note: `?forceRaf` URL param is a test hook that keeps animations running in headless/background tabs — irrelevant for normal use.
 
-## Third variant: the AI conversation
+## Third variant: the AI conversation, inside the immersive shell
 
-`Classic / Immersive / AI` in the nav. The AI variant asks the **same questions**
-and writes the **same answers** — Jovana just asks them herself, in Serbian.
+`Classic / Immersive / AI`. The AI variant is **not a chat window** — it is the
+immersive shell (one screen at a time, clouds, ambient audio) with the question on
+each screen written by Jovana instead of read off a list.
 
-**The division of labour is the whole design: Claude owns the words, `flow.js`
-owns the data.** Claude decides what to ask next and how to phrase it; the
-question ids, option ids and answer shapes are untouched, because the frailty
-scoring, the branching and the care plan all read them. A model free to invent
-options would produce answers that score nothing.
+It answers three things a questionnaire structurally cannot:
 
-Two tools, in `src/data/conversation.js`:
+**1. "What if it's easier to just write everything out?"** The first screen is a
+blank page, not a question: *"Recite mi svojim rečima šta se dešava."* One
+paragraph typically fills four to six answers at once, and the flow resumes from
+what is missing. Measured on a realistic paragraph: 16 remaining → 12, plus a note,
+in one turn.
 
-- `ask(questionId)` — the client renders that question's real cards from `flow.js`
-  underneath the message. Tapping one commits the answer directly, no round trip.
-- `record_answers([...])` — for anything typed. This is where the value is: one
-  sentence can fill several slots at once. *"Pala je dvaput prošle godine i kreće
-  se uz štap"* records **falls** and **mobility** together, and neither is ever
-  asked again. In the questionnaire that is two screens.
+**2. "What if the options don't contain what I'd say?"** A free-text field sits on
+every screen, under the cards — the cards are a shortcut, never a cage.
 
-The free-text composer is live at every step, so the user is never trapped in the
-cards.
+**3. "Then the next question has to adapt."** Two tools exist for exactly this:
 
-`stateMessage()` is sent each turn as a `role: "system"` message inside
-`messages[]` rather than folded into the system prompt — the remaining questions
-change as the band moves, and this way that churn doesn't invalidate the cached
-prefix above it.
+- `follow_up` — Jovana asks **her own** question, one that is nowhere in `flow.js`,
+  with no cards and optional soft suggestion chips. This is what stops the flow
+  from replying to *"sestra je kod nje tri dana nedeljno"* with the next scripted
+  question as if it hadn't heard.
+- `record_note` — anything said that belongs to no question is kept and **reaches
+  the care plan narrative**. Without it that sentence would be collected and then
+  silently dropped, which is the failure mode this variant exists to fix.
 
-**The support section is withheld until daily life is fully answered.** The
-frailty estimate exists from the first answer, but a band derived from two
-answers is not one to branch on — the model would ask a branch question, the band
-would move as the rest landed, and `reconcile` would drop the answer it had just
-collected. The other two variants get this for free by walking the steps in order;
-here the model chooses, so it is enforced in `remainingQuestions()`.
+Jovana always writes the question text herself; the flow's phrasing is never shown
+on screen. `ask(questionId)` only decides which cards appear beneath it.
+
+The boundary that keeps the rest of the app working: **Claude invents questions,
+never data.** Question ids, option ids and answer shapes are untouched, because the
+frailty scoring, the branching and the care plan all read them.
+
+`stateMessage()` goes out each turn as a `role: "system"` message inside
+`messages[]` — carrying the remaining questions *and the notes so far*, so nothing
+already said gets asked again — without invalidating the cached prefix above it.
+
+**The support section is withheld until daily life is fully answered.** The frailty
+estimate exists from the first answer, but a band derived from two answers is not
+one to branch on: the model would ask a branch question, the band would move as the
+rest landed, and `reconcile` would drop the answer it had just collected. The other
+two variants get this for free by walking the steps in order; here the model
+chooses, so `remainingQuestions()` enforces it.
 
 Serbian copy is an overlay (`src/data/flow.sr.js`), not a rewrite of `flow.js` —
 the other two variants stay English to match Figma, and the ids must not move.
 
 ### Running it
 
-Bring your own key: the app asks for one and keeps it in `localStorage`, so
-whoever pulls the repo uses their own and nothing secret is committed.
+Bring your own key: the app asks for one and keeps it in `localStorage`, so whoever
+pulls the repo uses their own and nothing secret is committed.
 
-> **Local demo only.** A key held in the browser is readable by anything running
-> on the page. Shipped, this call belongs behind a server.
+> **Local demo only.** A key held in the browser is readable by anything running on
+> the page. Shipped, this call belongs behind a server.
 
-Model config, in `src/lib/claudeChat.js`: `claude-opus-5`, **thinking on** at
-`low` effort. Thinking stays on deliberately — disabling it on this model lets
-tool calls arrive as plain text, so the turn succeeds, the call never runs,
-nothing errors, and in a loop that text poisons later turns. For a design that
-hangs entirely on tool use that is the worst available failure. `low` effort is
-the cheap lever instead. Server-side `fallbacks: "default"` is on, so a declined
-request re-runs on Anthropic's recommended fallback rather than dying.
+Model config, in `src/lib/claudeChat.js`: `claude-opus-5`, **thinking on** at `low`
+effort. Thinking stays on deliberately — disabling it on this model lets tool calls
+arrive as plain text, so the turn succeeds, the call never runs, nothing errors, and
+in a loop that text poisons later turns. For a design that hangs entirely on tool
+use that is the worst available failure. `low` effort is the cheap lever instead.
+Server-side `fallbacks: "default"` is on, so a declined request re-runs on
+Anthropic's recommended fallback rather than dying.

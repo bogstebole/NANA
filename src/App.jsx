@@ -14,7 +14,7 @@ import CopilotPanel from './components/CopilotPanel';
 import PaywallModal from './components/PaywallModal';
 import PlanDetail from './screens/PlanDetail';
 import Immersive from './screens/Immersive';
-import Conversation from './screens/Conversation';
+import ImmersiveConversation from './screens/ImmersiveConversation';
 import ApiKeyPanel from './components/ApiKeyPanel';
 import { loadKey, saveKey } from './lib/claudeChat';
 import { reconcile } from './data/dependencies';
@@ -47,9 +47,12 @@ export default function App() {
   // the AI variant runs against the developer's own key, kept in this browser
   const [apiKey, setApiKey] = useState(loadKey);
   const [askingKey, setAskingKey] = useState(false);
+  // things the family said that no question covers — they reach the plan
+  const [notes, setNotes] = useState([]);
   const [run, setRun] = useState(0); // remounts the flow on restart
 
   const onPlan = useCallback((p) => setPlan(p), []);
+  const onNote = useCallback((t) => setNotes((n) => (n.includes(t) ? n : [...n, t])), []);
   // Answers are reconciled, not just merged: a changed frailty level retires the
   // branch questions it no longer asks, so the state can never hold an answer to a
   // question this user is not being asked. Both variants go through here.
@@ -64,6 +67,7 @@ export default function App() {
 
   const restart = () => {
     setAnswers({});
+    setNotes([]);
     setPlan(null);
     setUnlocked(false);
     setRightPanel(null);
@@ -94,6 +98,7 @@ export default function App() {
       ]);
     }
     setAnswers({});
+    setNotes([]);
     setPlan(null);
     setRightPanel(null);
     setActiveThread('live');
@@ -202,49 +207,17 @@ export default function App() {
               onArtifacts={() => setRightPanel('plan')}
               onNewChat={newChat}
             />
-            {variant === 'ai' ? (
-              askingKey || !apiKey ? (
-                <ApiKeyPanel
-                  initial={apiKey}
-                  onSave={(k) => {
-                    saveKey(k);
-                    setApiKey(k);
-                    setAskingKey(false);
-                  }}
-                  onCancel={() => {
-                    setAskingKey(false);
-                    setVariant('classic');
-                  }}
-                />
-              ) : (
-                <Conversation
-                  key={`ai-${run}`}
-                  user={user}
-                  answers={answers}
-                  onAnswer={onAnswer}
-                  apiKey={apiKey}
-                  plan={plan}
-                  onPlan={onPlan}
-                  unlocked={unlocked}
-                  onOpenPlan={() => setRightPanel('plan')}
-                  onSelectCaregiver={selectCaregiver}
-                  onChangeKey={() => setAskingKey(true)}
-                  onFallback={() => setVariant('classic')}
-                />
-              )
-            ) : (
-              <Chat
-                key={`chat-${run}`}
-                user={user}
-                answers={answers}
-                onAnswer={onAnswer}
-                plan={plan}
-                onPlan={onPlan}
-                unlocked={unlocked}
-                onOpenPlan={() => setRightPanel('plan')}
-                onSelectCaregiver={selectCaregiver}
-              />
-            )}
+            <Chat
+              key={`chat-${run}`}
+              user={user}
+              answers={answers}
+              onAnswer={onAnswer}
+              plan={plan}
+              onPlan={onPlan}
+              unlocked={unlocked}
+              onOpenPlan={() => setRightPanel('plan')}
+              onSelectCaregiver={selectCaregiver}
+            />
           </div>
 
           {view === 'chat' && openThread && (
@@ -330,6 +303,44 @@ export default function App() {
             plan={plan}
             unlocked={unlocked}
             onClose={() => setRightPanel(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* The AI variant asks for a key first; it is fullscreen, so the gate is too. */}
+      <AnimatePresence>
+        {phase === 'app' && variant === 'ai' && (askingKey || !apiKey) && (
+          <div className="chat-container key-overlay" key="key-gate">
+            <ApiKeyPanel
+              initial={apiKey}
+              onSave={(k) => {
+                saveKey(k);
+                setApiKey(k);
+                setAskingKey(false);
+              }}
+              onCancel={() => {
+                setAskingKey(false);
+                setVariant('classic');
+              }}
+            />
+          </div>
+        )}
+        {phase === 'app' && variant === 'ai' && apiKey && !askingKey && (
+          <ImmersiveConversation
+            key={`ai-${run}`}
+            user={user}
+            answers={answers}
+            onAnswer={onAnswer}
+            notes={notes}
+            onNote={onNote}
+            apiKey={apiKey}
+            onPlan={onPlan}
+            onExit={() => setVariant('classic')}
+            onFinish={() => {
+              setVariant('classic');
+              setSelectedPlan('live');
+              setView('plan-detail');
+            }}
           />
         )}
       </AnimatePresence>

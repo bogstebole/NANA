@@ -110,13 +110,38 @@ export const TOOLS = [
     },
   },
   {
-    name: 'ask',
+    name: 'record_note',
     description:
-      'Prikaži korisniku kartice za odgovor na ovo pitanje. Pozovi ovo tačno jednom na kraju svakog svog poteza, osim kada su sva pitanja gotova.',
+      'Zapamti nešto važno što je korisnik rekao a ne pripada nijednom pitanju iz liste — okolnost, strah, ograničenje, detalj o porodici. Bez ovoga bi to nestalo. Ulazi u plan podrške.',
     input_schema: {
       type: 'object',
-      properties: { questionId: { type: 'string', description: 'id pitanja koje sada postavljaš' } },
+      properties: { tekst: { type: 'string', description: 'Jedna rečenica, njegovim rečima gde možeš.' } },
+      required: ['tekst'],
+    },
+  },
+  {
+    name: 'ask',
+    description:
+      'Postavi pitanje iz liste. Tekst pitanja pišeš sam, u svojoj poruci — ovaj alat samo određuje koje kartice se prikazuju ispod. Pozovi ga jednom na kraju poteza.',
+    input_schema: {
+      type: 'object',
+      properties: { questionId: { type: 'string', description: 'id pitanja iz liste preostalih' } },
       required: ['questionId'],
+    },
+  },
+  {
+    name: 'follow_up',
+    description:
+      'Postavi svoje potpitanje, koje ne postoji u listi — kada ti nešto nije jasno, kada je korisnik rekao nešto što traži pojašnjenje, ili kada bi defaultno sledeće pitanje zvučalo kao da ga nisi čula. Nema kartica; korisnik piše. Koristi umereno i nikad dvaput zaredom.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        predlozi: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Do četiri kratka predloga odgovora, kao meki nagoveštaj. Opciono.',
+        },
+      },
     },
   },
 ];
@@ -134,8 +159,16 @@ Obraćaš se sa „vi". Pišeš latinicom, na srpskom.
 Nadovezuješ se na ono što je čovek upravo rekao — ne prelaziš na sledeće pitanje kao da nisi čula.
 Nikad ne nabrajaš ponuđene opcije u tekstu. Korisnik ih vidi kao kartice ispod tvoje poruke.
 
+# Kako počinje
+Prvi ekran nije pitanje nego prazan papir — čovek svojim rečima opiše šta se dešava. Iz tog jednog pasusa izvuci sve što možeš odjednom preko \`record_answers\`, pa nastavi od onoga što fali. Ne vraćaj se na ono što je već rekao, ni u drugoj formulaciji.
+Ako je napisao malo ili ništa, samo kreni od prvog pitanja.
+
 # Kako radiš
 Postavljaš jedno pitanje odjednom, pozivom alata \`ask\`.
+Tekst pitanja uvek pišeš sama, u svojoj poruci. \`ask\` samo bira koje kartice se prikazuju ispod. Nikad ne recituj formulaciju iz liste — ona ti je samo podatak o tome šta treba da saznaš.
+Nadovezuj se. Ako je čovek upravo rekao da živi u drugom gradu, sledeće pitanje to uvažava umesto da nastavi kao da nije rekao ništa.
+Kada nešto nije jasno ili kada bi sledeće pitanje zvučalo gluvo, postavi svoje potpitanje preko \`follow_up\` umesto da guraš dalje.
+Kada čovek kaže nešto važno što ne pripada nijednom pitanju, zabeleži to preko \`record_note\`.
 Kada iz onoga što je čovek napisao možeš da popuniš neko pitanje, odmah to zabeležiš preko \`record_answers\` — i kada jednom rečenicom odgovori na više njih. „Pala je dvaput prošle godine i više ne može da kuva" su dva odgovora, ne jedan.
 Nikad ne pitaš ono što već znaš.
 Ako je odgovor nejasan, pitaj da razjasniš umesto da nagađaš. Ako je jasan, ne traži potvrdu.
@@ -154,19 +187,24 @@ ${Object.entries(STEP_INTRO)
 // Sent as a system-role message each turn: the remaining questions change as the
 // frailty band moves, and this keeps that list beside the conversation without
 // rewriting the cached system prompt above it.
-export function stateMessage(answers) {
+export function stateMessage(answers, notes = []) {
   const remaining = remainingQuestions(answers);
   const frailty = frailtyOf(answers);
 
   if (!remaining.length) {
-    return 'Sva pitanja su odgovorena. Zahvali se u jednoj rečenici i reci da sada praviš plan podrške. Ne pozivaj `ask`.';
+    return 'Sva pitanja su odgovorena. Zahvali se u jednoj rečenici i reci da sada praviš plan podrške. Ne pozivaj `ask` ni `follow_up`.';
   }
 
   return [
     frailty
       ? `Trenutna procena krhkosti: nivo ${frailty.level}. Ne pominji je korisniku — biće mu prikazana zasebno.`
       : 'Još nema dovoljno odgovora za procenu krhkosti.',
+    notes.length
+      ? `Već zabeleženo van pitanja (ne pitaj ponovo):\n${notes.map((n) => `- ${n}`).join('\n')}`
+      : null,
     `Preostala pitanja (${remaining.length}), redom:`,
     JSON.stringify(remaining, null, 1),
-  ].join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 }

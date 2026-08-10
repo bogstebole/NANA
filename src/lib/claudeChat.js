@@ -36,8 +36,20 @@ const REQUEST = {
  * can record several answers before it finishes, and each one can change which
  * questions remain, so the model has to see the new state within the same turn.
  */
-export async function runTurn({ client, system, messages, answers, onText, onAnswer, onAsk }) {
+export async function runTurn({
+  client,
+  system,
+  messages,
+  answers,
+  notes = [],
+  onText,
+  onAnswer,
+  onNote,
+  onAsk,
+  onFollowUp,
+}) {
   let working = { ...answers };
+  const collected = [...notes];
   const history = [...messages];
 
   for (let hop = 0; hop < 8; hop += 1) {
@@ -48,10 +60,7 @@ export async function runTurn({ client, system, messages, answers, onText, onAns
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
       system,
-      messages: [
-        ...history,
-        { role: 'system', content: stateMessage(working) },
-      ],
+      messages: [...history, { role: 'system', content: stateMessage(working, collected) }],
     });
 
     stream.on('text', (delta) => onText(delta));
@@ -64,7 +73,7 @@ export async function runTurn({ client, system, messages, answers, onText, onAns
     history.push({ role: 'assistant', content: message.content });
 
     const calls = message.content.filter((b) => b.type === 'tool_use');
-    if (!calls.length) return { messages: history, answers: working };
+    if (!calls.length) return { messages: history, answers: working, notes: collected };
 
     const results = [];
     for (const call of calls) {
@@ -90,12 +99,26 @@ export async function runTurn({ client, system, messages, answers, onText, onAns
             preostalo: remainingQuestions(working).length,
           }),
         });
+      } else if (call.name === 'record_note') {
+        const text = call.input.tekst?.trim();
+        if (text) {
+          collected.push(text);
+          onNote?.(text);
+        }
+        results.push({ type: 'tool_result', tool_use_id: call.id, content: 'Zabeleženo.' });
       } else if (call.name === 'ask') {
         onAsk(call.input.questionId);
         results.push({
           type: 'tool_result',
           tool_use_id: call.id,
           content: 'Kartice su prikazane korisniku. Sačekaj njegov odgovor — ne pitaj ništa više.',
+        });
+      } else if (call.name === 'follow_up') {
+        onFollowUp?.(call.input.predlozi || []);
+        results.push({
+          type: 'tool_result',
+          tool_use_id: call.id,
+          content: 'Polje za pisanje je prikazano. Sačekaj odgovor — ne pitaj ništa više.',
         });
       } else {
         results.push({
@@ -111,10 +134,10 @@ export async function runTurn({ client, system, messages, answers, onText, onAns
 
     // `ask` ends the turn: the model is now waiting on the user, and letting it
     // loop again would have it talk past the cards it just put on screen.
-    if (calls.some((c) => c.name === 'ask')) {
-      return { messages: history, answers: working };
+    if (calls.some((c) => c.name === 'ask' || c.name === 'follow_up')) {
+      return { messages: history, answers: working, notes: collected };
     }
   }
 
-  return { messages: history, answers: working };
+  return { messages: history, answers: working, notes: collected };
 }
