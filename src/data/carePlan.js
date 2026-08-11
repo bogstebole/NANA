@@ -284,7 +284,7 @@ const listOf = (items) =>
 // Builds the care plan from what the user actually answered, so the artifact
 // visibly reflects the questionnaire — and follows the client's formula:
 // decision = frailty (50%) + reason for contact (35%) + context (15%).
-export function buildPlan(answers) {
+export function buildPlan(answers, notes = []) {
   const name = answers['about-person']?.values?.name?.trim() || 'your loved one';
   const firstName = name.split(' ')[0];
   const age = answers['about-person']?.values?.age?.trim();
@@ -361,6 +361,12 @@ export function buildPlan(answers) {
       `What matters most to you is ${goal.charAt(0).toLowerCase()}${goal.slice(1).replace(/\.$/, '')}.` +
         (worry ? ` The worry you named is ${worry.charAt(0).toLowerCase()}${worry.slice(1).replace(/\.$/, '')}.` : '')
     );
+  }
+
+  // Anything the family said that no question covers. Without this it would be
+  // collected in the conversation and then quietly dropped on the way to the plan.
+  if (notes.length) {
+    narrative.push(`You also told us: ${listOf(notes.map((n) => n.replace(/\.$/, '')))}.`);
   }
 
   narrative.push(
@@ -477,6 +483,7 @@ export function buildPlan(answers) {
     worry,
     actions,
     role,
+    notes,
     coordinator,
   };
 }

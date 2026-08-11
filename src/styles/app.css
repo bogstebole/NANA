@@ -2128,6 +2128,17 @@ input {
   gap: var(--spacing-2);
 }
 
+/* Adjacent-sibling, so it only fires when nothing sits between the title and
+   the answer. The classic variant always has a subtitle there carrying its own
+   margin; the AI screens don't, which is why the cards were touching the text. */
+.imm-title + .imm-options,
+.imm-title + .imm-write,
+.imm-title + .imm-answer,
+.imm-title + .imm-composer-slot,
+.imm-title + .imm-actions {
+  margin-top: var(--spacing-7);
+}
+
 .imm-option {
   display: flex;
   align-items: center;
@@ -2432,11 +2443,52 @@ input {
 }
 
 /* the same scale, inside the immersive variant */
+/* The scale, with everything needed to read it: what it is called, where this
+   person sits on it, which way it runs, and what that level means. */
+.imm-scale {
+  width: 100%;
+  margin-top: var(--spacing-5);
+}
+
+.imm-scale-name {
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-leading);
+  color: #7d6f63;
+}
+
+.imm-scale-name strong {
+  font-weight: var(--font-medium);
+  color: #463d35;
+}
+
+.imm-scale-ends {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 16px;
+  color: #a2917f;
+}
+
+.imm-scale-blurb {
+  margin-top: var(--spacing-3);
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-leading);
+  color: #7d6f63;
+}
+
+.imm-scale-note {
+  margin-top: var(--spacing-2);
+  font-size: 11px;
+  line-height: 16px;
+  color: #a2917f;
+}
+
 .imm-cfs {
   display: flex;
   gap: 6px;
   width: 100%;
-  margin-top: var(--spacing-4);
+  margin-top: var(--spacing-3);
 }
 
 .imm-cfs-step {
@@ -3088,4 +3140,465 @@ input {
 .imm-option-input::placeholder {
   font-weight: var(--font-normal);
   color: rgba(76, 34, 18, 0.42);
+}
+
+/* ---------- AI conversation variant ---------- */
+
+.key-field {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+}
+
+.key-field svg {
+  flex-shrink: 0;
+  color: var(--text-disabled);
+}
+
+.key-field input {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-leading);
+  color: var(--text-primary);
+  letter-spacing: 0.04em;
+}
+
+.key-warning {
+  padding: var(--spacing-3);
+  border-radius: var(--radius-lg);
+  background: var(--status-wait-bg);
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+  color: var(--status-wait-fg);
+}
+
+/* the answer cards Claude puts on screen when it calls `ask` */
+.conv-answer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.conv-answer .select-card {
+  width: 100%;
+}
+
+.conv-error {
+  display: flex;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3);
+  border-radius: var(--radius-2xl);
+  background: var(--status-no-bg);
+}
+
+.conv-error > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--status-no-fg);
+}
+
+.conv-error-title {
+  font-size: var(--text-xs-size);
+  line-height: var(--text-xs-leading);
+  font-weight: var(--font-medium);
+  color: var(--status-no-fg);
+}
+
+.conv-error-note {
+  margin-top: 2px;
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+  color: var(--text-secondary);
+}
+
+.conv-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-3);
+}
+
+/* ---------- Immersive AI conversation ---------- */
+
+/* the API-key gate has to sit over the fullscreen variant, not behind it */
+.key-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--primary-subtle-highlight);
+}
+
+/* the blank page and the always-present escape hatch */
+.imm-write {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-4);
+}
+
+.imm-write textarea {
+  width: 100%;
+  padding: var(--spacing-4);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: var(--radius-2xl);
+  background: rgba(255, 255, 255, 0.52);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: 0 8px 32px rgba(122, 92, 70, 0.08);
+  font-family: inherit;
+  font-size: var(--text-base-size);
+  line-height: 26px;
+  color: var(--color-primary-900);
+  resize: none;
+  outline: none;
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
+
+.imm-write textarea:focus {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(253, 155, 119, 0.6);
+}
+
+.imm-write textarea::placeholder {
+  color: rgba(76, 34, 18, 0.38);
+}
+
+.imm-write-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* collapsed state — a quiet offer, not a second composer */
+.imm-write-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1-5);
+  margin-top: var(--spacing-4);
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+  color: var(--color-primary-800);
+  opacity: 0.6;
+  transition: opacity 0.2s ease, background 0.2s ease;
+}
+
+.imm-write-toggle:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.imm-skip {
+  margin-top: var(--spacing-3);
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+  color: var(--color-primary-800);
+  opacity: 0.5;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.imm-skip:hover {
+  opacity: 0.85;
+}
+
+/* soft chips Jovana can offer alongside her own follow-up question */
+.imm-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+}
+
+/* These are answers, one tap away — they have to feel pressable. They had a
+   single faint background change and nothing else: no border response, no
+   shadow, nothing under the finger. */
+.imm-suggestion {
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 2px rgba(76, 34, 18, 0.05);
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+  color: var(--color-primary-900);
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.imm-suggestion:hover {
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(253, 155, 119, 0.55);
+  box-shadow: 0 4px 12px rgba(76, 34, 18, 0.09);
+}
+
+.imm-suggestion:active {
+  background: rgba(255, 244, 238, 0.95);
+  border-color: var(--primary);
+  box-shadow: 0 1px 2px rgba(76, 34, 18, 0.05);
+}
+
+/* an input rendered as one of the glass cards */
+.imm-option.is-field {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  cursor: text;
+}
+
+.imm-field-name {
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--color-primary-800);
+  opacity: 0.6;
+}
+
+.imm-option.is-field input {
+  width: 100%;
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-leading);
+  font-weight: var(--font-medium);
+  color: var(--color-primary-900);
+}
+
+.imm-error {
+  margin-top: var(--spacing-3);
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+  color: var(--status-no-fg);
+}
+
+/* ---------- Opening screen: starters ---------- */
+
+.imm-starters-label {
+  margin-top: var(--spacing-8);
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: var(--font-medium);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-primary-800);
+  opacity: 0.45;
+}
+
+.imm-starters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  width: 100%;
+  margin-top: var(--spacing-3);
+}
+
+.imm-starter {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  width: 100%;
+  padding: var(--spacing-3) var(--spacing-4);
+  border-radius: var(--radius-2xl);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.52);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: 0 8px 32px rgba(122, 92, 70, 0.08);
+  text-align: left;
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
+
+.imm-starter:hover {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.imm-starter-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.imm-starter-title {
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-leading);
+  font-weight: var(--font-medium);
+  color: var(--color-primary-900);
+}
+
+.imm-starter-sub {
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+  color: var(--color-primary-800);
+  opacity: 0.6;
+}
+
+.imm-starter-arrow {
+  flex-shrink: 0;
+  color: var(--primary-highlight);
+  opacity: 0.55;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.imm-starter:hover .imm-starter-arrow {
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+/* a chat is the wrong channel for an emergency, and saying so costs nothing */
+.imm-urgent {
+  margin-top: var(--spacing-6);
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+  color: var(--color-primary-800);
+  opacity: 0.6;
+}
+
+.imm-urgent strong {
+  font-weight: var(--font-medium);
+  opacity: 1;
+}
+
+/* ---------- Streamed title: words resolving out of a blur ---------- */
+
+.imm-answer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ---------- One composer for everything typed ---------- */
+
+.imm-composer-slot {
+  width: 100%;
+  margin-top: var(--spacing-3);
+}
+
+.imm-composer-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  width: 100%;
+}
+
+/* it inherits .imm-option wholesale — same glass, padding, radius and badge
+   slot as a select card; only the cursor and the focus state differ */
+.imm-option.is-composer {
+  cursor: text;
+}
+
+.imm-option.is-composer:focus-within {
+  background: rgba(255, 255, 255, 0.78);
+  border-color: rgba(253, 155, 119, 0.7);
+}
+
+.imm-option.is-composer input {
+  width: 100%;
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-leading);
+  font-weight: var(--font-medium);
+  color: var(--color-primary-900);
+}
+
+.imm-option.is-composer input::placeholder {
+  font-weight: var(--font-normal);
+  color: rgba(76, 34, 18, 0.42);
+}
+
+/* The send control is the shared Button — primary, icon-only. All that is left
+   here is a size matching the badge on the other side of the card; the corner
+   radius is Button's own, like every other button in the app. */
+.imm-send.btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+}
+
+/* ---------- Conversation screen: the line stays put ---------- */
+
+/* The stage centres its child, so every card that mounted or unmounted
+   re-centred the whole block and the question drifted. Anchoring it near the
+   top means the cards grow downward and the line never moves. */
+.imm-screen.is-conversation {
+  align-self: flex-start;
+  margin-top: 20vh;
+}
+
+/* Three lines of height are reserved and the text centres inside them, so the
+   line grows out from the middle and what follows starts at the same place
+   whatever Jovana writes. Two lines was not enough: her questions regularly run
+   to three, and the box grew — holding the line still but pushing the cards
+   under it down by a full line every time a long question came up. */
+.imm-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(3 * 34px);
+}
+
+/* Jovana thinking, in the same box the answer will occupy. Nothing was shown
+   at all before: the screen sat empty for the whole of a model turn, which
+   reads as broken rather than as waiting. */
+.imm-thinking {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-leading);
+  font-weight: var(--font-normal);
+  color: #7d6f63;
+}
+
+.imm-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--primary);
+  opacity: 0.35;
+  animation: imm-think 1.15s ease-in-out infinite;
+}
+
+.imm-dot:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.imm-dot:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+.imm-thinking-text {
+  margin-left: var(--spacing-2);
+}
+
+@keyframes imm-think {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 0.9;
+    transform: translateY(-3px);
+  }
+}
+
+/* A word is the unit that wraps: the characters inside it are inline-blocks
+   with no whitespace between them, so a line can only ever break where a real
+   space is. The spaces themselves stay ordinary text between these boxes —
+   inside an inline-block a lone space collapses to nothing, which used to close
+   up every gap the write head passed over. */
+.imm-word {
+  display: inline-block;
+}
+
+/* The blur needs room to bleed rather than clip, which is what the inline-block
+   is for. It is on every character, settled ones included, so the line's
+   metrics are fixed from the first frame and only opacity and blur change. */
+.imm-word > span {
+  display: inline-block;
+  will-change: filter;
 }
