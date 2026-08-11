@@ -3510,14 +3510,12 @@ input {
 }
 
 /* The send control is the shared Button — primary, icon-only. All that is left
-   here is the round shape and a size that matches the badge on the other side
-   of the card; it used to be a hand-rolled button repeating what Button
-   already does. */
+   here is a size matching the badge on the other side of the card; the corner
+   radius is Button's own, like every other button in the app. */
 .imm-send.btn {
   flex-shrink: 0;
   width: 32px;
   height: 32px;
-  border-radius: 999px;
 }
 
 /* ---------- Conversation screen: the line stays put ---------- */
