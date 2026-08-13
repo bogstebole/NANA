@@ -62,7 +62,7 @@ export default function AgreementForm({ client, onSend, onCancel }) {
         </p>
       )}
 
-      <div className="panel-card-actions">
+      <div className="panel-card-actions is-end">
         <Button variant="secondary" onClick={onCancel}>
           Cancel
         </Button>

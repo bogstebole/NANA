@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   CalendarCheck,
   Check,
+  ChevronDown,
   Clock,
   FileCheck2,
   FilePen,
@@ -196,6 +197,26 @@ export default function ClientPage({ client, onBack, onSendAgreement, onRemind, 
   const state = agreementState(client);
   const due = dueVisit(client);
   const [modal, setModal] = useState(null); // null | 'agreement' | 'work-order'
+  const [termsOpen, setTermsOpen] = useState(false);
+
+  // What the row says without being opened. Enough to know the terms are the
+  // ones you remember; the pills and the pattern are behind the chevron.
+  //
+  // A switch, not a lookup object: every branch of an object literal is built
+  // before one is picked, so the two that read `client.services` ran for a
+  // family that has no agreement yet and took the page down with them.
+  const summary = (() => {
+    switch (state) {
+      case 'none':
+        return `${client.family} asked for ${client.hours} h/week · ${client.schedule}`;
+      case 'draft':
+        return `Not set yet — ${client.family} asked for ${client.hours} h/week`;
+      case 'sent':
+        return `${client.services.length} services · ${money(client.rate)}/h · sent ${client.sentOn}`;
+      default:
+        return `${client.services.length} services · ${money(client.rate)}/h · ${client.hours} h/week`;
+    }
+  })();
 
   const badge = {
     none: <span className="status-pill is-muted">Not accepted</span>,
@@ -255,75 +276,8 @@ export default function ClientPage({ client, onBack, onSendAgreement, onRemind, 
         </p>
       </div>
 
-      <Section title="Care agreement" badge={badge}>
-        {state === 'draft' && (
-          <>
-            <p className="ag-lead">
-              Accepted {client.acceptedOn}. Nothing can be scheduled until the agreement is set —
-              every visit, work order and payment after it is calculated from it.
-            </p>
-            <p className="ag-label">What {client.family} asked for</p>
-            <div className="ag-services">
-              {client.needs.map((id) => (
-                <span key={id} className="svc">
-                  {serviceTitle(id)}
-                </span>
-              ))}
-            </div>
-            <div className="bc-lines ag-terms">
-              <p className="bc-line">
-                <span className="bc-line-label">Hours</span>
-                <span className="bc-line-value">{client.hours} h/week</span>
-              </p>
-              <p className="bc-line">
-                <span className="bc-line-label">Pattern</span>
-                <span className="bc-line-value">{client.schedule}</span>
-              </p>
-            </div>
-            <div className="panel-card-actions">
-              <Button variant="primary" onClick={() => setModal('agreement')}>
-                <FileText size={14} strokeWidth={1.75} />
-                Set up agreement
-              </Button>
-            </div>
-          </>
-        )}
-
-        {state === 'sent' && (
-          <>
-            <p className="ag-lead">
-              Sent {client.sentOn}. Nothing can be scheduled until {client.family} signs it.
-              {client.remindedOn && ` Reminder sent ${client.remindedOn}.`}
-            </p>
-            <AgreedTerms client={client} />
-            <div className="panel-card-actions">
-              <Button variant="secondary" onClick={() => onRemind(client.id)}>
-                <Send size={14} strokeWidth={1.75} />
-                Send a reminder
-              </Button>
-            </div>
-          </>
-        )}
-
-        {state === 'active' && (
-          <>
-            <p className="ag-lead">
-              Every visit and work order below is calculated from these terms.
-            </p>
-            <AgreedTerms client={client} />
-          </>
-        )}
-
-        {state === 'none' && (
-          <p className="ag-lead">
-            {client.family} asked for {client.hours} h a week, {client.schedule.toLowerCase()}.
-            Accept the request on the board and the agreement opens here.
-          </p>
-        )}
-      </Section>
-
-      {/* An outstanding work order is a fact about this family, so it belongs on
-          the overview. Filling it in is a form, so it does not. */}
+      {/* An outstanding work order goes first: it is the only thing on this
+          page with a deadline. The agreement below it changes once. */}
       {due && (
         <Section
           title="Work order outstanding"
@@ -346,7 +300,7 @@ export default function ClientPage({ client, onBack, onSendAgreement, onRemind, 
               </span>
             </p>
           </div>
-          <div className="panel-card-actions">
+          <div className="panel-card-actions is-end">
             <Button variant="primary" onClick={() => setModal('work-order')}>
               <FileText size={14} strokeWidth={1.75} />
               Fill in work order
@@ -354,6 +308,83 @@ export default function ClientPage({ client, onBack, onSendAgreement, onRemind, 
           </div>
         </Section>
       )}
+
+      {/* Terms that are set once and then read occasionally. A row, with the
+          detail a click away — as a full panel it pushed the visits and the
+          history, the things that actually change, below the fold. */}
+      <section className="panel-card is-compact">
+        <div className="compact-row">
+          <button
+            type="button"
+            className="compact-text"
+            onClick={() => setTermsOpen((v) => !v)}
+            aria-expanded={termsOpen}
+          >
+            <span className="doc-section-title">
+              Care agreement
+              <ChevronDown
+                size={14}
+                strokeWidth={2}
+                className={`toggle-chevron${termsOpen ? '' : ' is-up'}`}
+              />
+            </span>
+            <span className="compact-sub">{summary}</span>
+          </button>
+          {badge}
+          {state === 'draft' && (
+            <Button variant="primary" onClick={() => setModal('agreement')}>
+              <FileText size={14} strokeWidth={1.75} />
+              Set up agreement
+            </Button>
+          )}
+          {state === 'sent' && (
+            <Button variant="secondary" onClick={() => onRemind(client.id)}>
+              <Send size={14} strokeWidth={1.75} />
+              Send a reminder
+            </Button>
+          )}
+        </div>
+
+        <AnimatePresence initial={false}>
+          {termsOpen && (
+            <motion.div
+              key="terms"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
+              style={{ overflow: 'hidden' }}
+            >
+              <div className="compact-body">
+                {state === 'none' || state === 'draft' ? (
+                  <>
+                    <p className="ag-label">What {client.family} asked for</p>
+                    <div className="ag-services">
+                      {client.needs.map((id) => (
+                        <span key={id} className="svc">
+                          {serviceTitle(id)}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="bc-lines ag-terms">
+                      <p className="bc-line">
+                        <span className="bc-line-label">Hours</span>
+                        <span className="bc-line-value">{client.hours} h/week</span>
+                      </p>
+                      <p className="bc-line">
+                        <span className="bc-line-label">Pattern</span>
+                        <span className="bc-line-value">{client.schedule}</span>
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <AgreedTerms client={client} />
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </section>
 
       <Section title="Visits">
         <Visits client={client} />

@@ -173,7 +173,7 @@ export default function WorkOrderForm({ client, visit, onSend, onCancel }) {
         </p>
       </div>
 
-      <div className="panel-card-actions">
+      <div className="panel-card-actions is-end">
         <Button variant="secondary" onClick={onCancel}>
           Cancel
         </Button>

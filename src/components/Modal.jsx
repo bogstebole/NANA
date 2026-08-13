@@ -23,8 +23,11 @@ export default function Modal({ title, eyebrow, wide, onClose, children }) {
       className="modal-backdrop"
       onClick={onClose}
       initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      animate={{ opacity: 1, pointerEvents: 'auto' }}
+      // On the way out it stops taking clicks immediately. It covers the whole
+      // screen, and it outlives its own fade by the length of the card's spring
+      // — long enough to swallow the first thing clicked after dismissing it.
+      exit={{ opacity: 0, pointerEvents: 'none' }}
       transition={{ duration: 0.18 }}
     >
       <motion.div
@@ -35,7 +38,9 @@ export default function Modal({ title, eyebrow, wide, onClose, children }) {
         onClick={(e) => e.stopPropagation()}
         initial={{ opacity: 0, scale: 0.96, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.98, y: 8 }}
+        // A spring to arrive on, a short curve to leave on: a dismissal that
+        // settles is a dismissal you wait for.
+        exit={{ opacity: 0, scale: 0.98, y: 8, transition: { duration: 0.14, ease: 'easeIn' } }}
         transition={{ type: 'spring', stiffness: 320, damping: 30 }}
       >
         <button type="button" className="ci-btn modal-close" onClick={onClose} aria-label="Close">
