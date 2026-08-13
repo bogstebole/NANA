@@ -3,11 +3,12 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight, ArrowUp, ArrowUpRight, LayoutList, PenLine, Volume2, VolumeX } from 'lucide-react';
 import { questionById } from '../data/flow';
 import { frailtyOf } from '../data/frailty';
-import { remainingQuestions, systemPrompt } from '../data/conversation';
+import { knownFacts, remainingQuestions, systemPrompt } from '../data/conversation';
 import { Q, CFS_SR, STARTERS, SECTION } from '../data/flow.sr';
 import { buildPlan, caregivers } from '../data/carePlan';
 import { createClient, runTurn } from '../lib/claudeChat';
 import CloudBackground from '../components/immersive/CloudBackground';
+import UnderstandingPanel from '../components/immersive/UnderstandingPanel';
 import { createZenAudio } from '../lib/zenAudio';
 import Button from '../components/Button';
 
@@ -292,17 +293,36 @@ export default function ImmersiveConversation({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [muted, setMuted] = useState(false);
+  const [assessment, setAssessment] = useState({ level: 0, reason: '', unknowns: [] });
+  const [dropped, setDropped] = useState(false);
   const history = useRef([]);
   const audioRef = useRef(null);
+  const levelRef = useRef(0);
+  const dropTimer = useRef(null);
 
   const asking = asked ? questionById[asked] : null;
+  // A turn is supposed to end by asking something. When it doesn't — the model
+  // spent every hop recording and assessing, or hit the tool loop's ceiling —
+  // the screen used to go blank and stay blank: no sentence, no cards, and no
+  // composer either, because that renders on the sentence being finished. The
+  // conversation was simply over, with no way back into it. So the screen keeps
+  // its own floor, and the way back in is always to write.
+  // Deliberately not conditioned on the sentence: a turn that writes something
+  // and still asks nothing is the same dead end, just one with text in it.
+  //
+  // And it reads `asking`, not `asked`. An `ask` for a question id that does not
+  // exist sets `asked` to something truthy that resolves to nothing — which is
+  // how a blank screen got past this check the first time.
+  const stalled = stage === 'talking' && !busy && !asking && !followUp;
   // A turn can call tools without writing a sentence, which left the screen
   // showing options with no question above them. The flow's own wording is the
   // floor: Jovana's phrasing is preferred, but something is always asked.
   //
   // Empty while she is still writing: the reveal only ever runs on a sentence
   // that is already complete, so its layout cannot change under it.
-  const line = busy ? '' : said || (asking ? Q[asking.id]?.title || asking.title : '');
+  const line = busy
+    ? ''
+    : said || (asking ? Q[asking.id]?.title || asking.title : stalled ? 'Recite mi još nešto o njoj.' : '');
   const typed = useTypewriter(line);
   // the gate everything below the line waits on
   const doneTyping = !busy && line.length > 0 && typed.length >= line.length;
@@ -312,18 +332,33 @@ export default function ImmersiveConversation({
 
   const frailty = frailtyOf(answers);
   const remaining = remainingQuestions(answers);
-  const answered = Object.keys(answers).length;
-  // The bar tracks data actually collected, which is real. The old "još 12"
-  // counted only questions from the list, so a `follow_up` screen froze it while
-  // screens went by — a number the flow cannot honour is worse than none.
-  const progress = answered + remaining.length ? answered / (answered + remaining.length) : 0;
-  const planName = answers['about-person']?.values?.name?.trim().split(' ')[0] || 'nju';
+  const firstName = answers['about-person']?.values?.name?.trim().split(' ')[0] || '';
+  const planName = firstName || 'nju';
+  const facts = useMemo(() => knownFacts(answers, notes), [answers, notes]);
+  // Once the plan exists there is nothing left to understand, and a ring stuck
+  // at 94 under a finished plan would contradict the screen it sits on.
+  const level = stage === 'plan' ? 100 : assessment.level;
 
   useEffect(() => {
     const audio = createZenAudio();
     audio.start();
     audioRef.current = audio;
     return () => audio.stop();
+  }, []);
+
+  useEffect(() => () => clearTimeout(dropTimer.current), []);
+
+  // A fall is the interesting event, so it gets said out loud for a moment. The
+  // one-point deadband is for a model that re-reports 71 as 70 without having
+  // learned anything — that is noise, not a step backwards.
+  const assess = useCallback((next) => {
+    if (next.level < levelRef.current - 1) {
+      setDropped(true);
+      clearTimeout(dropTimer.current);
+      dropTimer.current = setTimeout(() => setDropped(false), 5000);
+    }
+    levelRef.current = next.level;
+    setAssessment(next);
   }, []);
 
   const turn = useCallback(
@@ -358,6 +393,7 @@ export default function ImmersiveConversation({
           onNote,
           onAsk: (id) => setAsked(id),
           onFollowUp: (suggestions) => setFollowUp(suggestions),
+          onAssess: assess,
         });
         setSaid(spoken.trim());
         history.current = result.messages;
@@ -372,7 +408,7 @@ export default function ImmersiveConversation({
         setBusy(false);
       }
     },
-    [client, system, onAnswer, onNote, onPlan]
+    [client, system, onAnswer, onNote, onPlan, assess]
   );
 
   const pick = (answer, label) => {
@@ -397,10 +433,20 @@ export default function ImmersiveConversation({
     >
       <CloudBackground />
 
+      {/* Not in `imm-chrome`: the chrome is a strip across the top, and this is a
+          column down the left margin — the one part of the screen the centred
+          conversation never uses. */}
+      <UnderstandingPanel
+        level={level}
+        reason={assessment.reason}
+        unknowns={assessment.unknowns}
+        facts={facts}
+        name={firstName}
+        dropped={dropped}
+        done={stage === 'plan'}
+      />
+
       <div className="imm-chrome">
-        <div className="imm-progress" role="progressbar" aria-valuenow={Math.round(progress * 100)}>
-          <div className="imm-progress-fill" style={{ width: `${progress * 100}%` }} />
-        </div>
         <div className="imm-ctls">
           <button
             type="button"
@@ -532,7 +578,7 @@ export default function ImmersiveConversation({
 
               {/* Nothing below appears until the sentence has finished. */}
               <AnimatePresence mode="wait">
-                {doneTyping && (question || followUp) && (
+                {doneTyping && (question || followUp || stalled) && (
                   <motion.div
                     key={asked || 'follow-up'}
                     className="imm-answer"

@@ -47,6 +47,7 @@ export async function runTurn({
   onNote,
   onAsk,
   onFollowUp,
+  onAssess,
 }) {
   let working = { ...answers };
   const collected = [...notes];
@@ -76,6 +77,12 @@ export async function runTurn({
     if (!calls.length) return { messages: history, answers: working, notes: collected };
 
     const results = [];
+    // Whether this turn actually put something on screen for the user to answer.
+    // Not the same as "the model called `ask`": it can ask for a question id that
+    // does not exist, and ending the turn on that leaves a screen with nothing on
+    // it. Only a call that landed hands control back to the person.
+    let waiting = false;
+
     for (const call of calls) {
       if (call.name === 'record_answers') {
         const recorded = [];
@@ -106,15 +113,44 @@ export async function runTurn({
           onNote?.(text);
         }
         results.push({ type: 'tool_result', tool_use_id: call.id, content: 'Zabeleženo.' });
-      } else if (call.name === 'ask') {
-        onAsk(call.input.questionId);
+      } else if (call.name === 'assess') {
+        // Clamped here rather than trusted: the panel maps this straight onto a
+        // ring's fill, and a model that answers 120 would draw past the circle.
+        const level = Math.max(0, Math.min(100, Math.round(Number(call.input.razumevanje) || 0)));
+        onAssess?.({
+          level,
+          reason: call.input.zasto?.trim() || '',
+          unknowns: (call.input.nepoznanice || []).map((u) => u.trim()).filter(Boolean).slice(0, 4),
+        });
+        // Says what to do next, because `assess` is the one tool that reads like
+        // a whole turn's work without being one. A turn that only records and
+        // assesses ends with nothing on screen to answer.
         results.push({
           type: 'tool_result',
           tool_use_id: call.id,
-          content: 'Kartice su prikazane korisniku. Sačekaj njegov odgovor — ne pitaj ništa više.',
+          content: 'Zabeleženo. Sada napiši rečenicu korisniku i pozovi `ask` ili `follow_up`.',
         });
+      } else if (call.name === 'ask') {
+        const id = call.input.questionId;
+        if (!remainingQuestions(working).some((q) => q.id === id)) {
+          results.push({
+            type: 'tool_result',
+            tool_use_id: call.id,
+            content: `Nema pitanja sa id "${id}" među preostalima — ili je već odgovoreno. Izaberi id iz liste, ili postavi svoje potpitanje preko \`follow_up\`.`,
+            is_error: true,
+          });
+        } else {
+          onAsk(id);
+          waiting = true;
+          results.push({
+            type: 'tool_result',
+            tool_use_id: call.id,
+            content: 'Kartice su prikazane korisniku. Sačekaj njegov odgovor — ne pitaj ništa više.',
+          });
+        }
       } else if (call.name === 'follow_up') {
         onFollowUp?.(call.input.predlozi || []);
+        waiting = true;
         results.push({
           type: 'tool_result',
           tool_use_id: call.id,
@@ -132,9 +168,11 @@ export async function runTurn({
 
     history.push({ role: 'user', content: results });
 
-    // `ask` ends the turn: the model is now waiting on the user, and letting it
-    // loop again would have it talk past the cards it just put on screen.
-    if (calls.some((c) => c.name === 'ask' || c.name === 'follow_up')) {
+    // A landed `ask` ends the turn: the model is now waiting on the user, and
+    // letting it loop again would have it talk past the cards it just put on
+    // screen. A rejected one does not — it loops, reads the error, and picks a
+    // real question instead of leaving the person looking at nothing.
+    if (waiting) {
       return { messages: history, answers: working, notes: collected };
     }
   }

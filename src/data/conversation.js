@@ -54,15 +54,64 @@ function serialize(q, stepId) {
   return out;
 }
 
+// What Jovana already knows, as short phrases fit to show back to the person.
+//
+// Derived from `answers` rather than reported by the model: the two would drift,
+// and the ids are already the source of truth for the plan. The model only has
+// to say what it is still *missing* — that is the part no list can compute.
+// The caller's own name, relation and phone are collected, but they are not
+// facts about the person being cared for — and the panel these feed says they
+// are. Left in, "Marija Marić, unuka" sat in a list headed by her mother's name.
+const ABOUT_CALLER = new Set(['about-you']);
+
+export function knownFacts(answers, notes = []) {
+  const facts = [];
+
+  for (const [id, answer] of Object.entries(answers)) {
+    const q = questionById[id];
+    if (!q || ABOUT_CALLER.has(id)) continue;
+    const sr = Q[id] || {};
+    const label = (oid) => sr.options?.[oid] || q.options?.find((o) => o.id === oid)?.short;
+
+    if (q.type === 'inputs') {
+      const filled = Object.values(answer.values || {})
+        .map((v) => v?.trim())
+        .filter(Boolean);
+      if (filled.length) facts.push({ id, text: filled.join(', ') });
+    } else if (q.type === 'single') {
+      const text = label(answer.optionId);
+      if (text) facts.push({ id, text });
+    } else {
+      const texts = (answer.optionIds || []).map(label).filter(Boolean);
+      if (answer.other?.trim()) texts.push(answer.other.trim());
+      if (texts.length) facts.push({ id, text: texts.join(', ') });
+    }
+  }
+
+  notes.forEach((text, i) => facts.push({ id: `note-${i}`, text, note: true }));
+  return facts;
+}
+
 // The answer the model reports, in the shape the rest of the app already stores.
 export function toAnswer(entry) {
   const q = questionById[entry.questionId];
   if (!q) return null;
+  // Everything the model sends is checked against the question it claims to be
+  // answering. `multi` always did this; `single` and `inputs` took what they were
+  // given, so an invented option id was stored as a valid answer and only
+  // surfaced much later — an id no phrase table has a line for printed
+  // "undefined, and it has come on gradually" into the finished plan.
+  //
+  // Rejecting returns null, which the caller reports back as "not recorded", and
+  // the model asks again. A wrong answer that scores nothing is worse.
   if (q.type === 'inputs') {
-    return entry.values ? { values: entry.values } : null;
+    const values = Object.fromEntries(
+      Object.entries(entry.values || {}).filter(([id, v]) => q.fields.some((f) => f.id === id) && v?.trim())
+    );
+    return Object.keys(values).length ? { values } : null;
   }
   if (q.type === 'single') {
-    return entry.optionId ? { optionId: entry.optionId } : null;
+    return q.options.some((o) => o.id === entry.optionId) ? { optionId: entry.optionId } : null;
   }
   const ids = (entry.optionIds || []).filter((id) => q.options.some((o) => o.id === id));
   const other = entry.other?.trim();
@@ -120,6 +169,33 @@ export const TOOLS = [
     },
   },
   {
+    name: 'assess',
+    description:
+      'Reci koliko stvarno razumeš osobu o kojoj se radi i koliko si sigurna da joj možeš napraviti dobar plan. Pozovi ovo u svakom potezu, posle beleženja a pre nego što pitaš. Broj sme i da padne: ako je čovek rekao nešto što otvara pitanje koje ranije nisi ni znala da postoji, spusti ga iskreno.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        razumevanje: {
+          type: 'integer',
+          description:
+            'Od 0 do 100. 0 = ne znaš ništa o njoj. 100 = znaš dovoljno za plan u koji si sigurna. Budi stroga: odgovorena pitanja nisu isto što i razumevanje. Popunjena lista uz nejasan razlog poziva nije 100.',
+        },
+        zasto: {
+          type: 'string',
+          description:
+            'Jedna kratka rečenica korisniku, tvojim rečima: šta ti je sada jasno a šta još nije. Bez brojeva i procenata, bez „razumem vas".',
+        },
+        nepoznanice: {
+          type: 'array',
+          items: { type: 'string' },
+          description:
+            'Do četiri kratke fraze — šta ti fali da bi bila sigurna. Ljudskim jezikom, ne nazivi pitanja: „zašto baš sada", „kako podnosi stranca u kući".',
+        },
+      },
+      required: ['razumevanje', 'zasto'],
+    },
+  },
+  {
     name: 'ask',
     description:
       'Postavi pitanje iz liste. Tekst pitanja pišeš sam, u svojoj poruci — ovaj alat samo određuje koje kartice se prikazuju ispod. Pozovi ga jednom na kraju poteza.',
@@ -166,7 +242,8 @@ Ako je napisao malo ili ništa, samo kreni od prvog pitanja.
 # Svaki put kad ti čovek nešto napiše — ovim redom
 1. Pročitaj šta je stvarno rekao, celu poruku, i tek onda gledaj listu pitanja.
 2. Zabeleži sve što se može zabeležiti: \`record_answers\` za sve na šta je odgovorio, makar usput i drugim rečima, i \`record_note\` za sve važno što ne pripada nijednom pitanju. Ovo ide pre nego što bilo šta pitaš. Ono što ne zabeležiš — nestaje.
-3. Tek onda pitaj sledeće.
+3. Pozovi \`assess\` — koliko sada razumeš osobu o kojoj se radi i šta ti još fali.
+4. Tek onda pitaj sledeće.
 U svojoj rečenici pomeni konkretan detalj iz onoga što je upravo rekao — ime, mesto, broj, ono što ga muči. Ne uopšteno „razumem vas", nego znak da si pročitala baš to.
 Ako je napisao nešto što menja sliku a ti nisi sigurna kako, pitaj o tome preko \`follow_up\` umesto da nastaviš niz listu.
 
@@ -179,7 +256,10 @@ Kada čovek kaže nešto važno što ne pripada nijednom pitanju, zabeleži to p
 Pitanja tipa \`inputs\` nemaju kartice — čovek odgovara jednom rečenicom, a ti iz nje izvučeš polja. „Bogdan, sin, 063 555 210" je ime, srodstvo i telefon. Ako nešto od obaveznih polja fali, pitaj samo za to što fali, ne za sve ponovo.
 Kada iz onoga što je čovek napisao možeš da popuniš neko pitanje, odmah to zabeležiš preko \`record_answers\` — i kada jednom rečenicom odgovori na više njih. „Pala je dvaput prošle godine i više ne može da kuva" su dva odgovora, ne jedan.
 Nikad ne pitaš ono što već znaš.
+Čovek sa strane vidi koliko je razumeš — to je ono što šalješ kroz \`assess\`. Zato je taj broj tvoja iskrena procena, ne ohrabrenje: ako ti je nešto zamaglilo sliku, neka padne. Rečenica uz njega je jedino objašnjenje koje čovek dobija, pa neka bude konkretna.
 Ako je odgovor nejasan, pitaj da razjasniš umesto da nagađaš. Ako je jasan, ne traži potvrdu.
+Ako podatak deluje nemoguće ili u šali — 120 godina, grad na drugom kraju sveta — nemoj ga zabeležiti, ali nemoj ni stati. Reci mirno šta ti ne štima i pitaj preko \`follow_up\`. Čovek možda testira aplikaciju, možda je pogrešio, možda misli ozbiljno; u sva tri slučaja razgovor ide dalje.
+Svaki tvoj potez se završava tako što nešto pitaš — \`ask\` ili \`follow_up\`. Beleženje i procena nisu potez; bez pitanja čovek ostaje pred praznim ekranom.
 Redosled je tvoj, ali drži se sekcija: prvo upoznavanje, pa svakodnevni život, pa podrška, pa razlog poziva.
 
 # Šta ne radiš
@@ -200,11 +280,11 @@ export function stateMessage(answers, notes = []) {
   const frailty = frailtyOf(answers);
 
   if (!remaining.length) {
-    return 'Sva pitanja su odgovorena. Zahvali se u jednoj rečenici i reci da sada praviš plan podrške. Ne pozivaj `ask` ni `follow_up`.';
+    return 'Sva pitanja su odgovorena. Pozovi `assess` poslednji put, pa se zahvali u jednoj rečenici i reci da sada praviš plan podrške. Ne pozivaj `ask` ni `follow_up`.';
   }
 
   return [
-    'Prvo zabeleži sve iz poslednje korisnikove poruke (`record_answers`, `record_note`), pa tek onda pitaj sledeće. U svojoj rečenici pomeni konkretan detalj iz te poruke.',
+    'Prvo zabeleži sve iz poslednje korisnikove poruke (`record_answers`, `record_note`), pa pozovi `assess`, pa tek onda pitaj sledeće. U svojoj rečenici pomeni konkretan detalj iz te poruke.',
     frailty
       ? `Trenutna procena krhkosti: nivo ${frailty.level}. Ne pominji je korisniku — biće mu prikazana zasebno.`
       : 'Još nema dovoljno odgovora za procenu krhkosti.',

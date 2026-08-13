@@ -332,7 +332,12 @@ export function buildPlan(answers, notes = []) {
 
   if (reasonId) {
     narrative.push(
-      `${REASON_PHRASE[reasonId]}, ${ONSET_PHRASE[onsetId] || 'and it has been building for a while'}.` +
+      // Falls back the way the line below it and `actions` already do. The plan
+      // is the last thing anyone reads: a missing phrase here should cost a
+      // sentence's precision, never print the word "undefined" at a family.
+      `${REASON_PHRASE[reasonId] || REASON_PHRASE['daily-living']}, ${
+        ONSET_PHRASE[onsetId] || 'and it has been building for a while'
+      }.` +
         (hospital && answers['hospitalisation']?.optionId !== 'none'
           ? ` There has been a hospital stay — ${hospital.toLowerCase()}.`
           : '')
