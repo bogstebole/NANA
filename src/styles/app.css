@@ -3602,3 +3602,769 @@ input {
   display: inline-block;
   will-change: filter;
 }
+
+/* ---------- Register: which side of the product you are on ---------- */
+
+.role-choice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+/* ---------- Caregiver: top bar ---------- */
+
+/* No sidebar over here — a board wants the width, and a nav holding one
+   working item reads as broken rather than as small. */
+.cg-topbar {
+  gap: var(--spacing-3);
+  padding-left: var(--spacing-4);
+}
+
+.cg-topbar-role {
+  flex: 1;
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-disabled);
+}
+
+.cg-topbar-user {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+/* ---------- Caregiver: the board ---------- */
+
+/* Four columns need more than the 720px the reading views are capped at. */
+.view.is-board {
+  overflow: hidden;
+  padding-bottom: var(--spacing-4);
+}
+
+.view.is-board > * {
+  max-width: none;
+}
+
+.stat-row.is-four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.stat-note {
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-disabled);
+}
+
+/* Two levels of "this one is on you": something has been waiting, and
+   something is about to settle itself without her. */
+.stat.is-warn .stat-value {
+  color: var(--status-wait-fg);
+}
+
+.stat.is-urgent .stat-value,
+.stat.is-urgent .stat-note {
+  color: var(--status-no-fg);
+}
+
+.board {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  gap: var(--spacing-3);
+  overflow-x: auto;
+  padding-bottom: var(--spacing-2);
+}
+
+/* The floor is set by the card header: a Serbian surname, an age and a status
+   pill on one line. Below it the name wraps and the pill ends up beside a
+   two-line block, so narrower screens scroll the board sideways instead —
+   which is what a board is supposed to do. */
+.board-col {
+  flex: 1 1 0;
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: var(--spacing-3);
+  background: var(--surface-2);
+  border-radius: var(--radius-3xl);
+}
+
+.board-col-head {
+  flex-shrink: 0;
+  padding: 0 var(--spacing-1) var(--spacing-3);
+}
+
+.board-col-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-leading);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+}
+
+.board-col-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--surface-elevated-4);
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-secondary);
+}
+
+.board-col-note {
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-disabled);
+}
+
+.board-col-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  padding: var(--spacing-0-5);
+  scrollbar-width: thin;
+}
+
+.board-col-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.board-col-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.board-col-body::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.board-empty {
+  padding: var(--spacing-4) var(--spacing-3);
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-2xl);
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+  color: var(--text-disabled);
+  text-align: center;
+}
+
+/* ---------- Caregiver: a family on the board ---------- */
+
+.bc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3);
+  background: var(--surface-elevated);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-card);
+}
+
+/* Top-aligned, not centred: a long name wraps on a narrow board, and centring
+   left the avatar and the status pill floating halfway down the block. */
+.bc-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-2);
+}
+
+.bc-id {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The name is the card's real control — the whole card is clickable for the
+   mouse, but this is what keyboards and screen readers get. */
+.bc-name {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-leading);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.bc-name:hover {
+  color: var(--primary-subtle-foreground);
+}
+
+
+.bc-meta {
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-disabled);
+}
+
+/* The one line that says how heavy the work is. */
+.bc-frailty {
+  font-size: var(--text-xs-size);
+  line-height: var(--text-xs-leading);
+  color: var(--primary-subtle-foreground);
+}
+
+.bc-note {
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+  color: var(--text-secondary);
+}
+
+.bc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-1-5);
+}
+
+.bc-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bc-line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-2);
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+}
+
+.bc-line-label {
+  flex-shrink: 0;
+  color: var(--text-disabled);
+}
+
+.bc-line-value {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  color: var(--text-primary);
+}
+
+/* The money block: charged, what the platform takes, what lands. */
+.bc-total {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--spacing-2) var(--spacing-2-5);
+  background: var(--surface-2);
+  border-radius: var(--radius-lg);
+}
+
+.bc-line.is-net {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-1);
+  padding-top: var(--spacing-1);
+  border-top: 1px solid var(--border-subtle);
+  font-weight: var(--font-medium);
+}
+
+.bc-line.is-net .bc-line-label {
+  color: var(--text-primary);
+}
+
+.bc-actions {
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+.bc-actions .btn {
+  flex: 1;
+}
+
+/* ---------- Caregiver: one client ---------- */
+
+.client-head {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+.client-head .cg-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-2xl);
+  font-size: var(--text-sm-size);
+}
+
+.client-head-text {
+  min-width: 0;
+}
+
+.client-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--spacing-3) var(--spacing-4);
+  background: var(--surface-2);
+  border-radius: var(--radius-2xl);
+}
+
+.client-contact .bc-line-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+/* ---------- Caregiver: the care agreement ---------- */
+
+.ag-lead {
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+  color: var(--text-secondary);
+}
+
+.ag-label {
+  margin-top: var(--spacing-2);
+  font-size: var(--text-xs-size);
+  line-height: var(--text-xs-leading);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+}
+
+.ag-hint {
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-disabled);
+}
+
+.ag-services {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+}
+
+/* An outlined pill that fills in when it is part of the agreement — the same
+   shape whether it is being chosen or just being read. */
+.svc {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1-5);
+  padding: var(--spacing-2) var(--spacing-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: var(--surface-0);
+  font-size: var(--text-xs-size);
+  line-height: var(--text-xs-leading);
+  color: var(--text-primary);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+button.svc {
+  cursor: pointer;
+}
+
+button.svc:hover {
+  border-color: var(--color-primary-300);
+  background: var(--primary-subtle);
+}
+
+.svc.is-on,
+.svc.is-set {
+  border-color: var(--primary);
+  background: var(--primary-subtle);
+  color: var(--primary-subtle-foreground);
+  font-weight: var(--font-medium);
+}
+
+.ag-rate {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  align-self: flex-start;
+  height: var(--input-size);
+  padding: 0 var(--spacing-3);
+  border: 0.8px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-0);
+  transition: border-color 0.18s ease;
+}
+
+.ag-rate:focus-within {
+  border-color: var(--primary);
+}
+
+.ag-rate input {
+  width: 72px;
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-leading);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+}
+
+/* the spinner arrows fight the shape and nobody nudges an hourly rate by one */
+.ag-rate input::-webkit-outer-spin-button,
+.ag-rate input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.ag-rate-suffix {
+  font-size: var(--text-xs-size);
+  line-height: var(--text-xs-leading);
+  color: var(--text-disabled);
+}
+
+.ag-terms {
+  margin-top: var(--spacing-2);
+}
+
+/* ---------- Caregiver: visits ---------- */
+
+.visit-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  list-style: none;
+}
+
+.visit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  padding: var(--spacing-3);
+  background: var(--surface-2);
+  border-radius: var(--radius-2xl);
+}
+
+.visit-head {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.visit-when {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-xs-size);
+  line-height: var(--text-xs-leading);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+}
+
+.visit-note {
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+  color: var(--text-secondary);
+}
+
+.visit-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-disabled);
+}
+
+.visit-mood {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.visit-money {
+  margin-left: auto;
+}
+
+/* ---------- Caregiver: relationship activity ---------- */
+
+/* A rail down the left, so the entries read as one run of time rather than a
+   stack of unrelated rows. */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+}
+
+.tl-item {
+  position: relative;
+  display: flex;
+  gap: var(--spacing-3);
+  padding-bottom: var(--spacing-3);
+}
+
+.tl-item:last-child {
+  padding-bottom: 0;
+}
+
+.tl-item::before {
+  content: '';
+  position: absolute;
+  top: 26px;
+  bottom: 0;
+  left: 12px;
+  width: 1px;
+  background: var(--border-subtle);
+}
+
+.tl-item:last-child::before {
+  display: none;
+}
+
+.tl-dot {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 25px;
+  height: 25px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+}
+
+.tl-body {
+  flex: 1;
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.tl-text {
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+  color: var(--text-primary);
+}
+
+.tl-when {
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-disabled);
+}
+
+/* ---------- Caregiver: the work order ---------- */
+
+.wo-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-3);
+}
+
+.wo-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1-5);
+  min-width: 0;
+}
+
+.wo-field.is-wide {
+  flex: 1;
+}
+
+.wo-field .ag-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  margin-top: 0;
+}
+
+.wo-text {
+  width: 100%;
+  height: var(--input-size);
+  padding: 0 var(--spacing-3);
+  border: 0.8px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-0);
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-leading);
+  color: var(--text-primary);
+  transition: border-color 0.18s ease;
+}
+
+textarea.wo-text {
+  height: auto;
+  padding: var(--spacing-2) var(--spacing-3);
+  resize: vertical;
+  font-family: inherit;
+}
+
+.wo-text:focus {
+  border-color: var(--primary);
+}
+
+.wo-text::placeholder {
+  color: var(--text-disabled);
+}
+
+.wo-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+}
+
+/* the same pill as a service, in the size a three-way answer wants */
+.svc.is-sm {
+  padding: var(--spacing-1) var(--spacing-2-5);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+/* Not a checkbox with no words: this reaches the family, so opening it asks
+   for the sentence. */
+.wo-concern-open {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1-5);
+  align-self: flex-start;
+  margin-top: var(--spacing-1);
+  font-size: var(--text-xs-size);
+  line-height: var(--text-xs-leading);
+  color: var(--status-no-fg);
+  cursor: pointer;
+}
+
+.wo-concern-open:hover {
+  text-decoration: underline;
+}
+
+.wo-concern {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1-5);
+  margin-top: var(--spacing-1);
+  padding: var(--spacing-3);
+  border-radius: var(--radius-2xl);
+  background: var(--status-no-bg);
+}
+
+.wo-concern .ag-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  margin-top: 0;
+  color: var(--status-no-fg);
+}
+
+.wo-total {
+  margin-top: var(--spacing-2);
+}
+
+/* ---------- Caregiver: what a settled visit carries ---------- */
+
+.visit-services {
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-disabled);
+}
+
+.visit-concern {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-1-5);
+  padding: var(--spacing-2) var(--spacing-2-5);
+  border-radius: var(--radius-lg);
+  background: var(--status-no-bg);
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--status-no-fg);
+}
+
+/* ---------- Dialogs that hold a form ---------- */
+
+/* The paywall is a short pitch and reads well narrow; a work order is a report
+   with three answer rows and a list of services, and wants the width. */
+.modal.is-wide {
+  max-width: 560px;
+  align-items: stretch;
+  gap: var(--spacing-2);
+}
+
+.modal-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* the close button sits over this corner */
+  padding-right: var(--spacing-8);
+  margin-bottom: var(--spacing-1);
+}
+
+/* Actions pushed to the trailing edge — where a dialog's confirm belongs, and
+   where the eye already is after reading a row that ends in a status. The
+   unmodified class stays left-aligned for the panels in the family's app. */
+.panel-card-actions.is-end {
+  justify-content: flex-end;
+}
+
+/* ---------- Caregiver: terms as a row, not a panel ---------- */
+
+.panel-card.is-compact {
+  gap: 0;
+  padding: var(--spacing-3) var(--spacing-4);
+}
+
+.compact-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+.compact-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.compact-text .doc-section-title {
+  margin-top: 0;
+}
+
+.compact-text:hover .doc-section-title {
+  color: var(--primary-subtle-foreground);
+}
+
+.compact-sub {
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-disabled);
+}
+
+.compact-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  padding-top: var(--spacing-3);
+}
+
+/* A time range is six characters and a dash; it does not need the width of a
+   sentence next to the day it belongs to. */
+.wo-text.is-time {
+  width: 130px;
+}
+
+/* What the visit was supposed to be, carried into the report of what it was. */
+.wo-plan-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-1-5);
+  padding: var(--spacing-2) var(--spacing-2-5);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-secondary);
+}
