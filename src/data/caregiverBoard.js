@@ -169,8 +169,13 @@ export const clients = [
     services: ['medication', 'meals', 'company', 'housekeeping'],
     rate: 850,
     since: '12 June',
-    nextVisit: 'Tomorrow · 09:00–13:00',
-    visitHours: 4,
+    plan: {
+      date: 'Tomorrow',
+      time: '09:00–13:00',
+      hours: 4,
+      services: ['medication', 'meals', 'company'],
+      notes: 'Pick up the prescription from the pharmacy on Njegoševa. Milena asked to be called after.',
+    },
     visits: [
       { date: '8 August', time: '09:00–13:00', hours: 4, mood: 'good', eating: 'usual', moving: 'usual', services: ['medication', 'meals', 'company'], note: 'Morning routine, cooked for two days, short walk to the park.', status: 'paid' },
       { date: '6 August', time: '09:00–13:00', hours: 4, mood: 'usual', eating: 'usual', moving: 'usual', services: ['medication', 'meals', 'housekeeping'], note: 'Pharmacy run, laundry, lunch.', status: 'paid' },
@@ -204,8 +209,13 @@ export const clients = [
     services: ['personal-care', 'mobility', 'medication'],
     rate: 900,
     since: '3 March',
-    nextVisit: 'Thursday · 10:00–13:00',
-    visitHours: 3,
+    plan: {
+      date: 'Thursday',
+      time: '10:00–13:00',
+      hours: 3,
+      services: ['personal-care', 'mobility', 'medication'],
+      notes: 'Try the courtyard stairs again if he is up to it.',
+    },
     visits: [
       { date: '9 August', time: '10:00–13:00', hours: 3, mood: 'usual', eating: 'usual', moving: 'usual', services: ['personal-care', 'mobility', 'medication'], note: 'Wash, dressing, exercises with the walking frame.', status: 'paid' },
       { date: '7 August', time: '10:00–13:00', hours: 3, mood: 'good', eating: 'usual', moving: 'more', services: ['personal-care', 'mobility', 'medication'], note: 'Managed the stairs to the courtyard for the first time in weeks.', status: 'paid' },
@@ -237,10 +247,8 @@ export const clients = [
     rate: 850,
     since: '4 May',
     dueInHours: 2,
-    nextVisit: 'Friday · 09:00–12:00',
-    visitHours: 3,
     visits: [
-      { date: 'Yesterday', time: '09:00–12:00', hours: 3, status: 'due' },
+      { date: 'Yesterday', time: '09:00–12:00', hours: 3, planned: ['meals', 'housekeeping', 'company'], planNotes: 'Ironing, and she wanted help writing a letter.', status: 'due' },
       { date: '7 August', time: '09:00–12:00', hours: 3, mood: 'good', eating: 'usual', moving: 'usual', services: ['meals', 'housekeeping', 'company'], note: 'Cooked together, she did most of it herself.', status: 'paid' },
       { date: '5 August', time: '09:00–12:00', hours: 3, mood: 'usual', eating: 'usual', moving: 'usual', services: ['meals', 'housekeeping'], note: 'Shopping, cleaning the kitchen.', status: 'paid' },
     ],
@@ -271,10 +279,8 @@ export const clients = [
     rate: 800,
     since: '20 July',
     dueInHours: 19,
-    nextVisit: 'Monday · 08:00–14:00',
-    visitHours: 6,
     visits: [
-      { date: '9 August', time: '08:00–14:00', hours: 6, status: 'due' },
+      { date: '9 August', time: '08:00–14:00', hours: 6, planned: ['company', 'walks', 'errands'], planNotes: 'Market first, then the walk along the Danube.', status: 'due' },
       { date: '5 August', time: '08:00–14:00', hours: 6, mood: 'good', eating: 'more', moving: 'more', services: ['company', 'walks', 'errands'], note: 'Errands and a long walk. In good spirits all day.', status: 'paid' },
     ],
     activity: [
@@ -301,6 +307,15 @@ export function totalsFor(hours, rate) {
   const charged = hours * rate;
   const fee = Math.round(charged * SERVICE_FEE);
   return { charged, fee, net: charged - fee };
+}
+
+// How long a time range runs, so a plan does not have to be told twice how many
+// hours it is. Half-hour precision, which is as fine as anyone schedules.
+export function hoursIn(timeRange) {
+  const m = /^(\d{1,2}):(\d{2})\D+(\d{1,2}):(\d{2})$/.exec((timeRange || '').trim());
+  if (!m) return null;
+  const minutes = (+m[3] * 60 + +m[4]) - (+m[1] * 60 + +m[2]);
+  return minutes > 0 ? Math.round((minutes / 60) * 2) / 2 : null;
 }
 
 // The visit still waiting on its work order. Held in one place rather than

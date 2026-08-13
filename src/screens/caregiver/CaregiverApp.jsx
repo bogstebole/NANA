@@ -51,27 +51,46 @@ export default function CaregiverApp({ user, onRestart }) {
         activity: logged(c, 'note', `You sent ${c.family} a reminder to sign the agreement.`),
       })),
 
-    // A finished visit is what creates a work order, so logging one moves the
-    // family into the column that says money is owed — and straight into the
-    // form, because the report is the thing that was actually asked for.
-    onLogVisit: (id) => {
+    // Marking a visit done is what creates the work order, and it takes the
+    // plan with it: the report is filled in against what was meant to happen,
+    // not against the agreement in general.
+    onVisitDone: (id) =>
       patch(id, (c) => ({
         stage: 'work-order',
         dueInHours: 24,
+        plan: null,
         visits: [
           {
-            date: 'Today',
-            time: c.nextVisit?.split('· ')[1] || '',
-            hours: c.visitHours,
+            date: c.plan.date,
+            time: c.plan.time,
+            hours: c.plan.hours,
+            planned: c.plan.services,
+            planNotes: c.plan.notes,
             status: 'due',
           },
           ...(c.visits || []),
         ],
-        activity: logged(c, 'visit', `You logged a ${c.visitHours} h visit. The work order is due.`),
-      }));
-      setOpenId(id);
-    },
+        activity: logged(
+          c,
+          'visit',
+          `Visit done — ${c.plan.date} · ${c.plan.time}, ${c.plan.hours} h. The work order is due.`
+        ),
+      })),
   };
+
+  // The visit order, written before going. Editing an existing plan and making
+  // the first one are the same thing from here.
+  const planVisit = (id, plan) =>
+    patch(id, (c) => ({
+      plan,
+      activity: logged(
+        c,
+        c.plan ? 'note' : 'visit-planned',
+        c.plan
+          ? `You changed the plan for ${plan.date} · ${plan.time}.`
+          : `You planned a visit for ${plan.date} · ${plan.time}, ${plan.hours} h.`
+      ),
+    }));
 
   // Sending it settles the visit and pays for it. The report is written onto
   // the visit rather than kept beside it, because the hours that were charged
@@ -124,6 +143,8 @@ export default function CaregiverApp({ user, onRestart }) {
             onBack={() => setOpenId(null)}
             onSendAgreement={sendAgreement}
             onRemind={actions.onRemind}
+            onPlanVisit={planVisit}
+            onVisitDone={actions.onVisitDone}
             onSendWorkOrder={sendWorkOrder}
           />
         ) : (

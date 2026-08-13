@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import { motion } from 'framer-motion';
-import { AlertTriangle, CalendarClock, Check, Clock, FileText, Send, X } from 'lucide-react';
+import { AlertTriangle, CalendarPlus, Check, CheckCheck, Clock, FileText, Send, X } from 'lucide-react';
 import Button from '../Button';
 import Chip from '../Chip';
 import { dueVisit, frailtyLabel, money, serviceShort, workOrderTotals } from '../../data/caregiverBoard';
@@ -72,7 +72,7 @@ function Line({ label, value }) {
 // measures a leaving card so the ones under it can close the gap smoothly, and
 // it can only measure a child that hands back a DOM node.
 const BoardCard = forwardRef(function BoardCard(
-  { client, onOpen, onAccept, onDecline, onRemind, onLogVisit, onSendWorkOrder },
+  { client, onOpen, onAccept, onDecline, onRemind, onVisitDone },
   ref
 ) {
   const due = client.stage === 'work-order' ? dueVisit(client) : null;
@@ -168,7 +168,12 @@ const BoardCard = forwardRef(function BoardCard(
 
       {client.stage === 'active' && (
         <div className="bc-lines">
-          <Line label="Next visit" value={client.nextVisit} />
+          <Line
+            label="Next visit"
+            value={
+              client.plan ? `${client.plan.date} · ${client.plan.time}` : 'Nothing planned yet'
+            }
+          />
           <Line label="Rate" value={`${money(client.rate)}/h`} />
           <Line label="Agreed" value={`${client.hours} h/week`} />
         </div>
@@ -219,10 +224,20 @@ const BoardCard = forwardRef(function BoardCard(
           </Button>
         )}
 
-        {client.stage === 'active' && (
-          <Button variant="secondary" onClick={act(onLogVisit)}>
-            <CalendarClock size={14} strokeWidth={1.75} />
-            Log a visit
+        {/* Two steps, because they happen on different days: the plan is
+            written before going, and the visit is marked done on the way out.
+            Marking it done is what creates the work order. */}
+        {client.stage === 'active' && !client.plan && (
+          <Button variant="secondary" onClick={act(onOpen)}>
+            <CalendarPlus size={14} strokeWidth={1.75} />
+            Plan a visit
+          </Button>
+        )}
+
+        {client.stage === 'active' && client.plan && (
+          <Button variant="secondary" onClick={act(onVisitDone)}>
+            <CheckCheck size={14} strokeWidth={1.75} />
+            Visit done
           </Button>
         )}
 

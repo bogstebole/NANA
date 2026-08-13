@@ -4,7 +4,9 @@ import {
   AlertTriangle,
   ArrowLeft,
   CalendarCheck,
+  CalendarPlus,
   Check,
+  CheckCheck,
   ChevronDown,
   Clock,
   FileCheck2,
@@ -22,6 +24,7 @@ import {
 import Button from '../../components/Button';
 import Modal from '../../components/Modal';
 import AgreementForm from '../../components/caregiver/AgreementForm';
+import VisitPlanForm from '../../components/caregiver/VisitPlanForm';
 import WorkOrderForm from '../../components/caregiver/WorkOrderForm';
 import {
   agreementState,
@@ -56,6 +59,7 @@ const ACTIVITY_ICON = {
   'agreement-sent': FileText,
   'agreement-signed': FileCheck2,
   'agreement-changed': FilePen,
+  'visit-planned': CalendarPlus,
   visit: CalendarCheck,
   'work-order': Send,
   note: StickyNote,
@@ -193,10 +197,18 @@ function Activity({ client }) {
   );
 }
 
-export default function ClientPage({ client, onBack, onSendAgreement, onRemind, onSendWorkOrder }) {
+export default function ClientPage({
+  client,
+  onBack,
+  onSendAgreement,
+  onRemind,
+  onPlanVisit,
+  onVisitDone,
+  onSendWorkOrder,
+}) {
   const state = agreementState(client);
   const due = dueVisit(client);
-  const [modal, setModal] = useState(null); // null | 'agreement' | 'work-order'
+  const [modal, setModal] = useState(null); // null | 'agreement' | 'plan' | 'work-order'
   const [termsOpen, setTermsOpen] = useState(false);
 
   // What the row says without being opened. Enough to know the terms are the
@@ -309,6 +321,64 @@ export default function ClientPage({ client, onBack, onSendAgreement, onRemind, 
         </Section>
       )}
 
+      {/* The visit order: written before going, and the thing the work order is
+          later filled in against. Only an active arrangement can have one. */}
+      {state === 'active' && !due && (
+        <Section
+          title="Next visit"
+          badge={
+            client.plan ? (
+              <span className="status-pill is-muted">
+                <Clock size={12} strokeWidth={2} />
+                {client.plan.hours} h
+              </span>
+            ) : null
+          }
+        >
+          {client.plan ? (
+            <>
+              <p className="ag-lead">
+                {client.plan.date} · {client.plan.time} — {client.plan.hours} h at{' '}
+                {money(client.rate)}/h, {money(totalsFor(client.plan.hours, client.rate).net)} to
+                you if it runs to plan.
+              </p>
+              <p className="ag-label">Planned</p>
+              <div className="ag-services">
+                {client.plan.services.map((id) => (
+                  <span key={id} className="svc is-set">
+                    <Check size={13} strokeWidth={2.5} />
+                    {serviceTitle(id)}
+                  </span>
+                ))}
+              </div>
+              {client.plan.notes && <p className="visit-note">{client.plan.notes}</p>}
+              <div className="panel-card-actions is-end">
+                <Button variant="secondary" onClick={() => setModal('plan')}>
+                  Change the plan
+                </Button>
+                <Button variant="primary" onClick={() => onVisitDone(client.id)}>
+                  <CheckCheck size={14} strokeWidth={1.75} />
+                  Visit done
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="ag-lead">
+                Nothing planned yet. The visit order says what you are going for — the work order
+                afterwards is filled in against it.
+              </p>
+              <div className="panel-card-actions is-end">
+                <Button variant="primary" onClick={() => setModal('plan')}>
+                  <CalendarPlus size={14} strokeWidth={1.75} />
+                  Plan a visit
+                </Button>
+              </div>
+            </>
+          )}
+        </Section>
+      )}
+
       {/* Terms that are set once and then read occasionally. A row, with the
           detail a click away — as a full panel it pushed the visits and the
           history, the things that actually change, below the fold. */}
@@ -408,6 +478,26 @@ export default function ClientPage({ client, onBack, onSendAgreement, onRemind, 
               onSend={(id, terms) => {
                 setModal(null);
                 onSendAgreement(id, terms);
+              }}
+              onCancel={() => setModal(null)}
+            />
+          </Modal>
+        )}
+
+        {modal === 'plan' && (
+          <Modal
+            key="plan"
+            eyebrow={client.elder}
+            title={client.plan ? 'Change the visit' : 'Plan a visit'}
+            wide
+            onClose={() => setModal(null)}
+          >
+            <VisitPlanForm
+              client={client}
+              plan={client.plan}
+              onSave={(id, plan) => {
+                setModal(null);
+                onPlanVisit(id, plan);
               }}
               onCancel={() => setModal(null)}
             />

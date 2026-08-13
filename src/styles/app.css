@@ -4349,3 +4349,22 @@ textarea.wo-text {
   gap: var(--spacing-2);
   padding-top: var(--spacing-3);
 }
+
+/* A time range is six characters and a dash; it does not need the width of a
+   sentence next to the day it belongs to. */
+.wo-text.is-time {
+  width: 130px;
+}
+
+/* What the visit was supposed to be, carried into the report of what it was. */
+.wo-plan-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-1-5);
+  padding: var(--spacing-2) var(--spacing-2-5);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-secondary);
+}

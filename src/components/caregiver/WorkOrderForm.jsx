@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, Check, Send, Utensils, Footprints } from 'lucide-react';
+import { AlertTriangle, Check, ClipboardList, Send, Utensils, Footprints } from 'lucide-react';
 import Button from '../Button';
 import { money, serviceTitle, totalsFor } from '../../data/caregiverBoard';
 
@@ -8,9 +8,11 @@ import { money, serviceTitle, totalsFor } from '../../data/caregiverBoard';
 // against the agreement — the rate is the agreed rate, and the things that can
 // be ticked are the services the agreement covers, nothing else.
 //
-// It opens filled in for an ordinary visit: the planned hours, every service
-// ticked, everything "as usual". A visit that went to plan is read and sent;
-// only what actually differed has to be touched.
+// It opens against the visit order: the hours that were planned, the services
+// that were planned, everything "as usual". A visit that went to plan is read
+// and sent; only what actually differed has to be touched. Every service the
+// agreement covers is still offered, because a visit can turn into something
+// nobody planned.
 
 const MOODS = [
   { id: 'low', label: 'Low' },
@@ -49,7 +51,7 @@ export default function WorkOrderForm({ client, visit, onSend, onCancel }) {
   const [mood, setMood] = useState('usual');
   const [eating, setEating] = useState('usual');
   const [moving, setMoving] = useState('usual');
-  const [services, setServices] = useState(client.services);
+  const [services, setServices] = useState(visit.planned || client.services);
   const [concernOpen, setConcernOpen] = useState(false);
   const [concern, setConcern] = useState('');
 
@@ -66,6 +68,12 @@ export default function WorkOrderForm({ client, visit, onSend, onCancel }) {
       <p className="ag-lead">
         {visit.date} · {visit.time} — {visit.hours} h planned, at the agreed {money(client.rate)}/h.
       </p>
+      {visit.planNotes && (
+        <p className="wo-plan-note">
+          <ClipboardList size={13} strokeWidth={1.75} />
+          Planned: {visit.planNotes}
+        </p>
+      )}
 
       <div className="wo-row">
         <label className="wo-field">
@@ -119,7 +127,8 @@ export default function WorkOrderForm({ client, visit, onSend, onCancel }) {
 
       <p className="ag-label">What you got to</p>
       <p className="ag-hint">
-        Everything the agreement covers is ticked — untick anything that did not happen this time.
+        Ticked from the visit order — untick anything that did not happen, tick anything that
+        came up.
       </p>
       <div className="ag-services">
         {client.services.map((id) => (
