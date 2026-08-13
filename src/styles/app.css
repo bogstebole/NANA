@@ -4278,3 +4278,22 @@ textarea.wo-text {
   line-height: 16px;
   color: var(--status-no-fg);
 }
+
+/* ---------- Dialogs that hold a form ---------- */
+
+/* The paywall is a short pitch and reads well narrow; a work order is a report
+   with three answer rows and a list of services, and wants the width. */
+.modal.is-wide {
+  max-width: 560px;
+  align-items: stretch;
+  gap: var(--spacing-2);
+}
+
+.modal-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* the close button sits over this corner */
+  padding-right: var(--spacing-8);
+  margin-bottom: var(--spacing-1);
+}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -19,10 +19,10 @@ import {
   Frown,
 } from 'lucide-react';
 import Button from '../../components/Button';
+import Modal from '../../components/Modal';
+import AgreementForm from '../../components/caregiver/AgreementForm';
 import WorkOrderForm from '../../components/caregiver/WorkOrderForm';
 import {
-  DEFAULT_RATE,
-  SERVICES,
   agreementState,
   dueVisit,
   frailtyLabel,
@@ -37,6 +37,11 @@ import {
 // relationship around both. The three answer different questions — what is
 // agreed, what was done and what was paid, and what has passed between us —
 // which is why they are three sections and not one feed.
+//
+// The page reads; it does not ask. Setting the agreement and filling in a work
+// order are forms, and forms live in a dialog — left open on the page they made
+// it look like something was unfinished every time it was opened, and buried
+// the overview under an empty form.
 
 const MOOD = {
   low: { icon: Frown, label: 'Low' },
@@ -65,81 +70,6 @@ function Section({ title, badge, children }) {
       </div>
       {children}
     </section>
-  );
-}
-
-// The draft: which services, and one rate. Both are pre-filled from what the
-// family actually asked for, so the common case is reading it and pressing send
-// rather than building it from nothing.
-function AgreementDraft({ client, onSend, onCancel }) {
-  const [services, setServices] = useState(client.needs);
-  const [rate, setRate] = useState(String(client.rate || DEFAULT_RATE));
-
-  const toggle = (id) =>
-    setServices((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
-
-  const rateNumber = Number(rate);
-  const valid = services.length > 0 && rateNumber > 0;
-  const weekly = valid ? rateNumber * client.hours : 0;
-
-  return (
-    <>
-      <p className="ag-lead">
-        The agreement sets out which services you provide and one shared hourly rate. Everything
-        after this — visits, work orders, payments — is calculated from it.
-      </p>
-
-      <p className="ag-label">Services this agreement covers</p>
-      <div className="ag-services">
-        {SERVICES.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            className={`svc${services.includes(s.id) ? ' is-on' : ''}`}
-            onClick={() => toggle(s.id)}
-            aria-pressed={services.includes(s.id)}
-          >
-            {services.includes(s.id) && <Check size={13} strokeWidth={2.5} />}
-            {s.title}
-          </button>
-        ))}
-      </div>
-      <p className="ag-hint">
-        Ticked from what {client.family} asked for. Add or remove anything that does not match.
-      </p>
-
-      <p className="ag-label">Hourly rate</p>
-      <div className="ag-rate">
-        <input
-          type="number"
-          inputMode="numeric"
-          value={rate}
-          onChange={(e) => setRate(e.target.value)}
-          aria-label="Hourly rate in dinars"
-        />
-        <span className="ag-rate-suffix">RSD / h</span>
-      </div>
-      {valid && (
-        <p className="ag-hint">
-          At {client.hours} h a week that is {money(weekly)} a week, {money(totalsFor(client.hours, rateNumber).net)}{' '}
-          to you after the 10% service fee.
-        </p>
-      )}
-
-      <div className="panel-card-actions">
-        <Button variant="secondary" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button
-          variant="primary"
-          disabled={!valid}
-          onClick={() => onSend(client.id, { services, rate: rateNumber })}
-        >
-          <Send size={14} strokeWidth={1.75} />
-          Send to client
-        </Button>
-      </div>
-    </>
   );
 }
 
@@ -265,6 +195,7 @@ function Activity({ client }) {
 export default function ClientPage({ client, onBack, onSendAgreement, onRemind, onSendWorkOrder }) {
   const state = agreementState(client);
   const due = dueVisit(client);
+  const [modal, setModal] = useState(null); // null | 'agreement' | 'work-order'
 
   const badge = {
     none: <span className="status-pill is-muted">Not accepted</span>,
@@ -326,7 +257,36 @@ export default function ClientPage({ client, onBack, onSendAgreement, onRemind, 
 
       <Section title="Care agreement" badge={badge}>
         {state === 'draft' && (
-          <AgreementDraft client={client} onSend={onSendAgreement} onCancel={onBack} />
+          <>
+            <p className="ag-lead">
+              Accepted {client.acceptedOn}. Nothing can be scheduled until the agreement is set —
+              every visit, work order and payment after it is calculated from it.
+            </p>
+            <p className="ag-label">What {client.family} asked for</p>
+            <div className="ag-services">
+              {client.needs.map((id) => (
+                <span key={id} className="svc">
+                  {serviceTitle(id)}
+                </span>
+              ))}
+            </div>
+            <div className="bc-lines ag-terms">
+              <p className="bc-line">
+                <span className="bc-line-label">Hours</span>
+                <span className="bc-line-value">{client.hours} h/week</span>
+              </p>
+              <p className="bc-line">
+                <span className="bc-line-label">Pattern</span>
+                <span className="bc-line-value">{client.schedule}</span>
+              </p>
+            </div>
+            <div className="panel-card-actions">
+              <Button variant="primary" onClick={() => setModal('agreement')}>
+                <FileText size={14} strokeWidth={1.75} />
+                Set up agreement
+              </Button>
+            </div>
+          </>
         )}
 
         {state === 'sent' && (
@@ -362,9 +322,11 @@ export default function ClientPage({ client, onBack, onSendAgreement, onRemind, 
         )}
       </Section>
 
+      {/* An outstanding work order is a fact about this family, so it belongs on
+          the overview. Filling it in is a form, so it does not. */}
       {due && (
         <Section
-          title="Work order"
+          title="Work order outstanding"
           badge={
             <span className={`status-pill is-${client.dueInHours <= 6 ? 'declined' : 'pending'}`}>
               <Clock size={12} strokeWidth={2} />
@@ -372,12 +334,24 @@ export default function ClientPage({ client, onBack, onSendAgreement, onRemind, 
             </span>
           }
         >
-          <WorkOrderForm
-            client={client}
-            visit={due}
-            onSend={onSendWorkOrder}
-            onCancel={onBack}
-          />
+          <p className="ag-lead">
+            {due.date} · {due.time} — {due.hours} h at the agreed {money(client.rate)}/h. It charges
+            itself after 24 hours, so send it with the hours and the report that actually happened.
+          </p>
+          <div className="bc-lines ag-terms">
+            <p className="bc-line">
+              <span className="bc-line-label">If sent as planned</span>
+              <span className="bc-line-value">
+                {money(totalsFor(due.hours, client.rate).net)} to you
+              </span>
+            </p>
+          </div>
+          <div className="panel-card-actions">
+            <Button variant="primary" onClick={() => setModal('work-order')}>
+              <FileText size={14} strokeWidth={1.75} />
+              Fill in work order
+            </Button>
+          </div>
         </Section>
       )}
 
@@ -388,6 +362,47 @@ export default function ClientPage({ client, onBack, onSendAgreement, onRemind, 
       <Section title="Activity">
         <Activity client={client} />
       </Section>
+
+      <AnimatePresence>
+        {modal === 'agreement' && (
+          <Modal
+            key="agreement"
+            eyebrow={client.elder}
+            title="Care agreement"
+            wide
+            onClose={() => setModal(null)}
+          >
+            <AgreementForm
+              client={client}
+              onSend={(id, terms) => {
+                setModal(null);
+                onSendAgreement(id, terms);
+              }}
+              onCancel={() => setModal(null)}
+            />
+          </Modal>
+        )}
+
+        {modal === 'work-order' && due && (
+          <Modal
+            key="work-order"
+            eyebrow={client.elder}
+            title="Work order"
+            wide
+            onClose={() => setModal(null)}
+          >
+            <WorkOrderForm
+              client={client}
+              visit={due}
+              onSend={(id, report) => {
+                setModal(null);
+                onSendWorkOrder(id, report);
+              }}
+              onCancel={() => setModal(null)}
+            />
+          </Modal>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
