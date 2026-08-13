@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
+  AlertTriangle,
   ArrowLeft,
   CalendarCheck,
   Check,
@@ -18,12 +19,15 @@ import {
   Frown,
 } from 'lucide-react';
 import Button from '../../components/Button';
+import WorkOrderForm from '../../components/caregiver/WorkOrderForm';
 import {
   DEFAULT_RATE,
   SERVICES,
   agreementState,
+  dueVisit,
   frailtyLabel,
   money,
+  serviceShort,
   serviceTitle,
   totalsFor,
 } from '../../data/caregiverBoard';
@@ -169,12 +173,16 @@ function AgreedTerms({ client }) {
   );
 }
 
+const AMOUNT_WORD = { less: 'less than usual', usual: 'as usual', more: 'more than usual' };
+
 function Visits({ client }) {
-  const visits = client.visits || [];
+  // The visit still waiting on its work order is not in here — it is the form
+  // above, and listing it twice would say a visit is both done and outstanding.
+  const visits = (client.visits || []).filter((v) => v.status !== 'due');
   if (!visits.length) {
     return (
       <p className="board-empty">
-        No visits yet. They start once {client.family} signs the agreement.
+        No visits settled yet. They start once {client.family} signs the agreement.
       </p>
     );
   }
@@ -197,11 +205,18 @@ function Visits({ client }) {
                 <p className="visit-when">
                   {v.date} · {v.time}
                 </p>
-                <span className={`status-pill is-${v.status === 'due' ? 'pending' : 'accepted'}`}>
-                  {v.status === 'due' ? 'Work order due' : 'Paid'}
-                </span>
+                <span className="status-pill is-accepted">Paid</span>
               </div>
               <p className="visit-note">{v.note}</p>
+              {v.services?.length > 0 && (
+                <p className="visit-services">{v.services.map(serviceShort).join(' · ')}</p>
+              )}
+              {v.concern && (
+                <p className="visit-concern">
+                  <AlertTriangle size={12} strokeWidth={2} />
+                  {v.concern}
+                </p>
+              )}
               <div className="visit-foot">
                 {Mood && (
                   <span className="visit-mood">
@@ -209,6 +224,8 @@ function Visits({ client }) {
                     {MOOD[v.mood].label}
                   </span>
                 )}
+                {v.eating && <span className="visit-mood">ate {AMOUNT_WORD[v.eating]}</span>}
+                {v.moving && <span className="visit-mood">moved {AMOUNT_WORD[v.moving]}</span>}
                 <span className="visit-money">
                   {v.hours} h · {money(totals.net)}
                 </span>
@@ -245,8 +262,9 @@ function Activity({ client }) {
   );
 }
 
-export default function ClientPage({ client, onBack, onSendAgreement, onRemind }) {
+export default function ClientPage({ client, onBack, onSendAgreement, onRemind, onSendWorkOrder }) {
   const state = agreementState(client);
+  const due = dueVisit(client);
 
   const badge = {
     none: <span className="status-pill is-muted">Not accepted</span>,
@@ -343,6 +361,25 @@ export default function ClientPage({ client, onBack, onSendAgreement, onRemind }
           </p>
         )}
       </Section>
+
+      {due && (
+        <Section
+          title="Work order"
+          badge={
+            <span className={`status-pill is-${client.dueInHours <= 6 ? 'declined' : 'pending'}`}>
+              <Clock size={12} strokeWidth={2} />
+              {client.dueInHours} h left
+            </span>
+          }
+        >
+          <WorkOrderForm
+            client={client}
+            visit={due}
+            onSend={onSendWorkOrder}
+            onCancel={onBack}
+          />
+        </Section>
+      )}
 
       <Section title="Visits">
         <Visits client={client} />

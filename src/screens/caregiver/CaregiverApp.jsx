@@ -8,8 +8,9 @@ import {
   clients as seedClients,
   money,
   paidThisMonth,
+  serviceShort,
   serviceTitle,
-  workOrderTotals,
+  totalsFor,
 } from '../../data/caregiverBoard';
 
 // The caregiver's whole application: the board, one client, and the state both
@@ -32,6 +33,7 @@ export default function CaregiverApp({ user, onRestart }) {
 
   const actions = {
     onOpen: (id) => setOpenId(id),
+    onSendWorkOrder: (id) => setOpenId(id),
 
     onAccept: (id) =>
       patch(id, (c) => ({
@@ -50,43 +52,49 @@ export default function CaregiverApp({ user, onRestart }) {
       })),
 
     // A finished visit is what creates a work order, so logging one moves the
-    // family into the column that says money is owed.
-    onLogVisit: (id) =>
+    // family into the column that says money is owed — and straight into the
+    // form, because the report is the thing that was actually asked for.
+    onLogVisit: (id) => {
       patch(id, (c) => ({
         stage: 'work-order',
-        visit: { date: 'Today', time: c.nextVisit?.split('· ')[1] || '', hours: c.visitHours },
         dueInHours: 24,
         visits: [
           {
             date: 'Today',
             time: c.nextVisit?.split('· ')[1] || '',
             hours: c.visitHours,
-            mood: 'usual',
-            note: 'Logged from the board — the visit report is still to be filled in.',
             status: 'due',
           },
           ...(c.visits || []),
         ],
         activity: logged(c, 'visit', `You logged a ${c.visitHours} h visit. The work order is due.`),
-      })),
-
-    onSendWorkOrder: (id) => {
-      const c = clients.find((x) => x.id === id);
-      if (!c) return;
-      const net = workOrderTotals(c).net;
-      setPaid((p) => p + net);
-      patch(id, (cur) => ({
-        stage: 'active',
-        visit: null,
-        dueInHours: null,
-        visits: (cur.visits || []).map((v, i) => (i === 0 ? { ...v, status: 'paid' } : v)),
-        activity: logged(
-          cur,
-          'work-order',
-          `Work order sent for the ${c.visit.hours} h visit. ${money(net)} to you.`
-        ),
       }));
+      setOpenId(id);
     },
+  };
+
+  // Sending it settles the visit and pays for it. The report is written onto
+  // the visit rather than kept beside it, because the hours that were charged
+  // and the account of what happened are the same record.
+  const sendWorkOrder = (id, report) => {
+    const client = clients.find((c) => c.id === id);
+    if (!client) return;
+    const net = totalsFor(report.hours, client.rate).net;
+    setPaid((p) => p + net);
+    patch(id, (c) => ({
+      stage: 'active',
+      dueInHours: null,
+      visits: (c.visits || []).map((v) =>
+        v.status === 'due' ? { ...v, ...report, note: report.note || 'No notes.', status: 'paid' } : v
+      ),
+      activity: logged(
+        c,
+        'work-order',
+        `Work order sent for the ${report.hours} h visit — ${report.services.map(serviceShort).join(', ').toLowerCase() || 'nothing ticked'}. ${money(net)} to you.` +
+          (report.concern ? ` You flagged: ${report.concern}` : '')
+      ),
+    }));
+    setOpenId(null);
   };
 
   const sendAgreement = (id, { services, rate }) =>
@@ -116,6 +124,7 @@ export default function CaregiverApp({ user, onRestart }) {
             onBack={() => setOpenId(null)}
             onSendAgreement={sendAgreement}
             onRemind={actions.onRemind}
+            onSendWorkOrder={sendWorkOrder}
           />
         ) : (
           <Board key="board" user={user} clients={clients} paid={paid} actions={actions} />

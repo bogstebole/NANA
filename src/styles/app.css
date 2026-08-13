@@ -4151,3 +4151,130 @@ button.svc:hover {
   line-height: 16px;
   color: var(--text-disabled);
 }
+
+/* ---------- Caregiver: the work order ---------- */
+
+.wo-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-3);
+}
+
+.wo-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1-5);
+  min-width: 0;
+}
+
+.wo-field.is-wide {
+  flex: 1;
+}
+
+.wo-field .ag-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  margin-top: 0;
+}
+
+.wo-text {
+  width: 100%;
+  height: var(--input-size);
+  padding: 0 var(--spacing-3);
+  border: 0.8px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-0);
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-leading);
+  color: var(--text-primary);
+  transition: border-color 0.18s ease;
+}
+
+textarea.wo-text {
+  height: auto;
+  padding: var(--spacing-2) var(--spacing-3);
+  resize: vertical;
+  font-family: inherit;
+}
+
+.wo-text:focus {
+  border-color: var(--primary);
+}
+
+.wo-text::placeholder {
+  color: var(--text-disabled);
+}
+
+.wo-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+}
+
+/* the same pill as a service, in the size a three-way answer wants */
+.svc.is-sm {
+  padding: var(--spacing-1) var(--spacing-2-5);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+/* Not a checkbox with no words: this reaches the family, so opening it asks
+   for the sentence. */
+.wo-concern-open {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1-5);
+  align-self: flex-start;
+  margin-top: var(--spacing-1);
+  font-size: var(--text-xs-size);
+  line-height: var(--text-xs-leading);
+  color: var(--status-no-fg);
+  cursor: pointer;
+}
+
+.wo-concern-open:hover {
+  text-decoration: underline;
+}
+
+.wo-concern {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1-5);
+  margin-top: var(--spacing-1);
+  padding: var(--spacing-3);
+  border-radius: var(--radius-2xl);
+  background: var(--status-no-bg);
+}
+
+.wo-concern .ag-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  margin-top: 0;
+  color: var(--status-no-fg);
+}
+
+.wo-total {
+  margin-top: var(--spacing-2);
+}
+
+/* ---------- Caregiver: what a settled visit carries ---------- */
+
+.visit-services {
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-disabled);
+}
+
+.visit-concern {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-1-5);
+  padding: var(--spacing-2) var(--spacing-2-5);
+  border-radius: var(--radius-lg);
+  background: var(--status-no-bg);
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--status-no-fg);
+}

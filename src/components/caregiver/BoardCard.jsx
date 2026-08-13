@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { AlertTriangle, CalendarClock, Check, Clock, FileText, Send, X } from 'lucide-react';
 import Button from '../Button';
 import Chip from '../Chip';
-import { frailtyLabel, money, serviceShort, workOrderTotals } from '../../data/caregiverBoard';
+import { dueVisit, frailtyLabel, money, serviceShort, workOrderTotals } from '../../data/caregiverBoard';
 
 // One family, on the caregiver's board. The card is the same object in every
 // column — same person, same header — and only the middle and the buttons
@@ -75,7 +75,8 @@ const BoardCard = forwardRef(function BoardCard(
   { client, onOpen, onAccept, onDecline, onRemind, onLogVisit, onSendWorkOrder },
   ref
 ) {
-  const totals = client.stage === 'work-order' ? workOrderTotals(client) : null;
+  const due = client.stage === 'work-order' ? dueVisit(client) : null;
+  const totals = due ? workOrderTotals(client) : null;
 
   // The whole card opens the client. Every button inside it stops there, so a
   // decline is never also a navigation.
@@ -173,11 +174,11 @@ const BoardCard = forwardRef(function BoardCard(
         </div>
       )}
 
-      {client.stage === 'work-order' && (
+      {client.stage === 'work-order' && due && (
         <>
           <div className="bc-lines">
-            <Line label="Visit" value={`${client.visit.date} · ${client.visit.time}`} />
-            <Line label="Worked" value={`${client.visit.hours} h at ${money(client.rate)}/h`} />
+            <Line label="Visit" value={`${due.date} · ${due.time}`} />
+            <Line label="Worked" value={`${due.hours} h at ${money(client.rate)}/h`} />
           </div>
           <div className="bc-total">
             <Line label="Charged" value={money(totals.charged)} />
@@ -225,10 +226,13 @@ const BoardCard = forwardRef(function BoardCard(
           </Button>
         )}
 
+        {/* The work order is a report, not a button: hours, how the person
+            was, what actually got done. It is filled in on the client's page,
+            which is where the agreement it prices against lives. */}
         {client.stage === 'work-order' && (
-          <Button variant="primary" onClick={act(onSendWorkOrder)}>
-            <Send size={14} strokeWidth={1.75} />
-            Send work order
+          <Button variant="primary" onClick={act(onOpen)}>
+            <FileText size={14} strokeWidth={1.75} />
+            Fill in work order
           </Button>
         )}
       </div>

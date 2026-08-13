@@ -172,9 +172,9 @@ export const clients = [
     nextVisit: 'Tomorrow · 09:00–13:00',
     visitHours: 4,
     visits: [
-      { date: '8 August', time: '09:00–13:00', hours: 4, mood: 'good', note: 'Morning routine, cooked for two days, short walk to the park.', status: 'paid' },
-      { date: '6 August', time: '09:00–13:00', hours: 4, mood: 'usual', note: 'Pharmacy run, laundry, lunch.', status: 'paid' },
-      { date: '4 August', time: '09:00–13:00', hours: 4, mood: 'low', note: 'Tired all morning, did not want to go out. Ate very little.', status: 'paid' },
+      { date: '8 August', time: '09:00–13:00', hours: 4, mood: 'good', eating: 'usual', moving: 'usual', services: ['medication', 'meals', 'company'], note: 'Morning routine, cooked for two days, short walk to the park.', status: 'paid' },
+      { date: '6 August', time: '09:00–13:00', hours: 4, mood: 'usual', eating: 'usual', moving: 'usual', services: ['medication', 'meals', 'housekeeping'], note: 'Pharmacy run, laundry, lunch.', status: 'paid' },
+      { date: '4 August', time: '09:00–13:00', hours: 4, mood: 'low', eating: 'less', moving: 'less', services: ['medication', 'meals'], concern: 'Eating much less than usual for the third time this week.', note: 'Tired all morning, did not want to go out. Ate very little.', status: 'paid' },
     ],
     activity: [
       { kind: 'request', when: '10 June', text: 'Milena sent a request.' },
@@ -207,8 +207,8 @@ export const clients = [
     nextVisit: 'Thursday · 10:00–13:00',
     visitHours: 3,
     visits: [
-      { date: '9 August', time: '10:00–13:00', hours: 3, mood: 'usual', note: 'Wash, dressing, exercises with the walking frame.', status: 'paid' },
-      { date: '7 August', time: '10:00–13:00', hours: 3, mood: 'good', note: 'Managed the stairs to the courtyard for the first time in weeks.', status: 'paid' },
+      { date: '9 August', time: '10:00–13:00', hours: 3, mood: 'usual', eating: 'usual', moving: 'usual', services: ['personal-care', 'mobility', 'medication'], note: 'Wash, dressing, exercises with the walking frame.', status: 'paid' },
+      { date: '7 August', time: '10:00–13:00', hours: 3, mood: 'good', eating: 'usual', moving: 'more', services: ['personal-care', 'mobility', 'medication'], note: 'Managed the stairs to the courtyard for the first time in weeks.', status: 'paid' },
     ],
     activity: [
       { kind: 'request', when: '1 March', text: 'Dušan sent a request.' },
@@ -236,14 +236,13 @@ export const clients = [
     services: ['meals', 'housekeeping', 'company'],
     rate: 850,
     since: '4 May',
-    visit: { date: 'Yesterday', time: '09:00–12:00', hours: 3 },
     dueInHours: 2,
     nextVisit: 'Friday · 09:00–12:00',
     visitHours: 3,
     visits: [
-      { date: 'Yesterday', time: '09:00–12:00', hours: 3, mood: 'usual', note: 'Cooking, ironing, a long conversation about her grandson.', status: 'due' },
-      { date: '7 August', time: '09:00–12:00', hours: 3, mood: 'good', note: 'Cooked together, she did most of it herself.', status: 'paid' },
-      { date: '5 August', time: '09:00–12:00', hours: 3, mood: 'usual', note: 'Shopping, cleaning the kitchen.', status: 'paid' },
+      { date: 'Yesterday', time: '09:00–12:00', hours: 3, status: 'due' },
+      { date: '7 August', time: '09:00–12:00', hours: 3, mood: 'good', eating: 'usual', moving: 'usual', services: ['meals', 'housekeeping', 'company'], note: 'Cooked together, she did most of it herself.', status: 'paid' },
+      { date: '5 August', time: '09:00–12:00', hours: 3, mood: 'usual', eating: 'usual', moving: 'usual', services: ['meals', 'housekeeping'], note: 'Shopping, cleaning the kitchen.', status: 'paid' },
     ],
     activity: [
       { kind: 'request', when: '2 May', text: 'Marko sent a request.' },
@@ -271,13 +270,12 @@ export const clients = [
     services: ['company', 'walks', 'errands'],
     rate: 800,
     since: '20 July',
-    visit: { date: '9 August', time: '08:00–14:00', hours: 6 },
     dueInHours: 19,
     nextVisit: 'Monday · 08:00–14:00',
     visitHours: 6,
     visits: [
-      { date: '9 August', time: '08:00–14:00', hours: 6, mood: 'good', note: 'Market, a walk along the Danube, lunch out.', status: 'due' },
-      { date: '5 August', time: '08:00–14:00', hours: 6, mood: 'good', note: 'Errands and a long walk. In good spirits all day.', status: 'paid' },
+      { date: '9 August', time: '08:00–14:00', hours: 6, status: 'due' },
+      { date: '5 August', time: '08:00–14:00', hours: 6, mood: 'good', eating: 'more', moving: 'more', services: ['company', 'walks', 'errands'], note: 'Errands and a long walk. In good spirits all day.', status: 'paid' },
     ],
     activity: [
       { kind: 'request', when: '18 July', text: 'Tanja sent a request.' },
@@ -305,7 +303,14 @@ export function totalsFor(hours, rate) {
   return { charged, fee, net: charged - fee };
 }
 
-export const workOrderTotals = (client) => totalsFor(client.visit.hours, client.rate);
+// The visit still waiting on its work order. Held in one place rather than
+// duplicated onto the client, which was two truths about the same visit.
+export const dueVisit = (client) => (client.visits || []).find((v) => v.status === 'due');
+
+export const workOrderTotals = (client) => {
+  const v = dueVisit(client);
+  return totalsFor(v ? v.hours : 0, client.rate);
+};
 
 // Where the agreement stands, said once so the board and the client page cannot
 // disagree about it.
