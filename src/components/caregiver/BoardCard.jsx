@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { AlertTriangle, CalendarClock, Check, Clock, FileText, Send, X } from 'lucide-react';
 import Button from '../Button';
 import Chip from '../Chip';
-import { frailtyLabel, money, workOrderTotals } from '../../data/caregiverBoard';
+import { frailtyLabel, money, serviceShort, workOrderTotals } from '../../data/caregiverBoard';
 
 // One family, on the caregiver's board. The card is the same object in every
 // column — same person, same header — and only the middle and the buttons
@@ -72,16 +72,28 @@ function Line({ label, value }) {
 // measures a leaving card so the ones under it can close the gap smoothly, and
 // it can only measure a child that hands back a DOM node.
 const BoardCard = forwardRef(function BoardCard(
-  { client, onAccept, onDecline, onAgreement, onLogVisit, onSendWorkOrder },
+  { client, onOpen, onAccept, onDecline, onRemind, onLogVisit, onSendWorkOrder },
   ref
 ) {
   const totals = client.stage === 'work-order' ? workOrderTotals(client) : null;
+
+  // The whole card opens the client. Every button inside it stops there, so a
+  // decline is never also a navigation.
+  const act = (fn) => (e) => {
+    e.stopPropagation();
+    fn(client.id);
+  };
 
   return (
     <motion.article
       ref={ref}
       layout
       className="bc"
+      // Clicking anywhere opens the client, which is convenient with a mouse
+      // and nothing more: the card is not announced as a button, because a
+      // button holding Accept and Decline inside it is a lie to anything
+      // reading the page aloud. The name below is the real control.
+      onClick={() => onOpen(client.id)}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.18 } }}
@@ -93,7 +105,9 @@ const BoardCard = forwardRef(function BoardCard(
             the name it left long names wrapping around a two-character number
             and the status pill pushed off on its own. */}
         <div className="bc-id">
-          <p className="bc-name">{client.elder}</p>
+          <button type="button" className="bc-name" onClick={act(onOpen)}>
+            {client.elder}
+          </button>
           <p className="bc-meta">
             {client.age} · {client.area} · {client.distance}
           </p>
@@ -108,7 +122,7 @@ const BoardCard = forwardRef(function BoardCard(
           </p>
           <div className="bc-chips">
             {client.needs.map((n) => (
-              <Chip key={n}>{n}</Chip>
+              <Chip key={n}>{serviceShort(n)}</Chip>
             ))}
           </div>
           <div className="bc-lines">
@@ -128,7 +142,7 @@ const BoardCard = forwardRef(function BoardCard(
           </p>
           <div className="bc-chips">
             {client.needs.map((n) => (
-              <Chip key={n}>{n}</Chip>
+              <Chip key={n}>{serviceShort(n)}</Chip>
             ))}
           </div>
           <div className="bc-lines">
@@ -179,11 +193,11 @@ const BoardCard = forwardRef(function BoardCard(
       <div className="bc-actions">
         {client.stage === 'request' && (
           <>
-            <Button variant="secondary" onClick={() => onDecline(client.id)}>
+            <Button variant="secondary" onClick={act(onDecline)}>
               <X size={14} strokeWidth={2} />
               Decline
             </Button>
-            <Button variant="primary" onClick={() => onAccept(client.id)}>
+            <Button variant="primary" onClick={act(onAccept)}>
               <Check size={14} strokeWidth={2} />
               Accept
             </Button>
@@ -191,28 +205,28 @@ const BoardCard = forwardRef(function BoardCard(
         )}
 
         {client.stage === 'agreement' && !client.agreementSent && (
-          <Button variant="primary" onClick={() => onAgreement(client.id)}>
+          <Button variant="primary" onClick={act(onOpen)}>
             <FileText size={14} strokeWidth={1.75} />
             Set up agreement
           </Button>
         )}
 
         {client.stage === 'agreement' && client.agreementSent && (
-          <Button variant="secondary" onClick={() => onAgreement(client.id)}>
+          <Button variant="secondary" onClick={act(onRemind)}>
             <Send size={14} strokeWidth={1.75} />
             Send a reminder
           </Button>
         )}
 
         {client.stage === 'active' && (
-          <Button variant="secondary" onClick={() => onLogVisit(client.id)}>
+          <Button variant="secondary" onClick={act(onLogVisit)}>
             <CalendarClock size={14} strokeWidth={1.75} />
             Log a visit
           </Button>
         )}
 
         {client.stage === 'work-order' && (
-          <Button variant="primary" onClick={() => onSendWorkOrder(client.id)}>
+          <Button variant="primary" onClick={act(onSendWorkOrder)}>
             <Send size={14} strokeWidth={1.75} />
             Send work order
           </Button>

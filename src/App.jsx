@@ -15,8 +15,7 @@ import PaywallModal from './components/PaywallModal';
 import PlanDetail from './screens/PlanDetail';
 import Immersive from './screens/Immersive';
 import ImmersiveConversation from './screens/ImmersiveConversation';
-import CaregiverBoard from './screens/caregiver/Board';
-import CaregiverTopBar from './components/caregiver/CaregiverTopBar';
+import CaregiverApp from './screens/caregiver/CaregiverApp';
 import ApiKeyPanel from './components/ApiKeyPanel';
 import { loadKey, saveKey } from './lib/claudeChat';
 import { reconcile } from './data/dependencies';
@@ -167,10 +166,7 @@ export default function App() {
   if (phase === 'app' && isCaregiver) {
     return (
       <div className="app">
-        <div className="chat-container">
-          <CaregiverTopBar user={user} onRestart={restart} />
-          <CaregiverBoard user={user} />
-        </div>
+        <CaregiverApp user={user} onRestart={restart} />
       </div>
     );
   }

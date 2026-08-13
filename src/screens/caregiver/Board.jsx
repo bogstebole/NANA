@@ -1,14 +1,7 @@
-import { forwardRef, useState } from 'react';
+import { forwardRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import BoardCard from '../../components/caregiver/BoardCard';
-import {
-  STAGES,
-  boardSummary,
-  clients as seedClients,
-  money,
-  paidThisMonth,
-  workOrderTotals,
-} from '../../data/caregiverBoard';
+import { STAGES, boardSummary, money } from '../../data/caregiverBoard';
 
 // The caregiver's home screen. Four columns, left to right in the order the
 // work actually happens, and a card only ever sits in the column that names
@@ -17,8 +10,6 @@ import {
 // Cards are not dragged. Where a family sits is not her opinion, it is a
 // consequence of what she has done — and the two things she does first, accept
 // and decline, have no direction to drag in anyway.
-
-const DEFAULT_RATE = 850;
 
 const EMPTY_COPY = {
   request: 'No new requests right now.',
@@ -72,46 +63,8 @@ function Stat({ value, label, note, tone }) {
   );
 }
 
-export default function CaregiverBoard({ user }) {
-  const [list, setList] = useState(seedClients);
-  const [paid, setPaid] = useState(paidThisMonth);
-  const s = boardSummary(list);
-
-  const update = (id, patch) =>
-    setList((cs) => cs.map((c) => (c.id === id ? { ...c, ...patch } : c)));
-
-  const accept = (id) =>
-    update(id, { stage: 'agreement', agreementSent: false, acceptedOn: 'just now' });
-
-  const decline = (id) => setList((cs) => cs.filter((c) => c.id !== id));
-
-  // Sending the agreement and chasing it are the same button in two states;
-  // the setup screen itself is the next piece of work and will open from here.
-  const agreement = (id) => {
-    const c = list.find((x) => x.id === id);
-    if (!c) return;
-    if (c.agreementSent) update(id, { remindedOn: 'just now' });
-    else update(id, { agreementSent: true, sentOn: 'just now', rate: c.rate || DEFAULT_RATE });
-  };
-
-  // A finished visit is what creates a work order, so logging one moves the
-  // family into the column that says money is owed.
-  const logVisit = (id) => {
-    const c = list.find((x) => x.id === id);
-    if (!c) return;
-    update(id, {
-      stage: 'work-order',
-      visit: { date: 'Today', time: c.nextVisit.split('· ')[1] || '', hours: c.visitHours },
-      dueInHours: 24,
-    });
-  };
-
-  const sendWorkOrder = (id) => {
-    const c = list.find((x) => x.id === id);
-    if (!c) return;
-    setPaid((p) => p + workOrderTotals(c).net);
-    update(id, { stage: 'active', visit: null, dueInHours: null });
-  };
+export default function CaregiverBoard({ user, clients, paid, actions }) {
+  const s = boardSummary(clients);
 
   const waitNote =
     s.requests === 0
@@ -155,24 +108,20 @@ export default function CaregiverBoard({ user }) {
           }
           tone={s.soonestDue <= 6 ? 'urgent' : null}
         />
-        <Stat value={money(paid)} label="Paid to you in August" note={`${s.active} arrangements running`} />
+        <Stat
+          value={money(paid)}
+          label="Paid to you in August"
+          note={`${s.active} arrangements running`}
+        />
       </div>
 
       <motion.div className="board" layout>
         {STAGES.map((stage) => {
-          const cards = list.filter((c) => c.stage === stage.id);
+          const cards = clients.filter((c) => c.stage === stage.id);
           return (
             <Column key={stage.id} stage={stage} cards={cards}>
               {cards.map((c) => (
-                <BoardCard
-                  key={c.id}
-                  client={c}
-                  onAccept={accept}
-                  onDecline={decline}
-                  onAgreement={agreement}
-                  onLogVisit={logVisit}
-                  onSendWorkOrder={sendWorkOrder}
-                />
+                <BoardCard key={c.id} client={c} {...actions} />
               ))}
             </Column>
           );
