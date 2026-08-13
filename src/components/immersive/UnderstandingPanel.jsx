@@ -51,6 +51,10 @@ function Known({ facts }) {
           exit="exit"
           layout
         >
+          {/* Notes carry no topic — they are the things no question asked for,
+              and inventing a heading for one would be putting words in her
+              mouth. The orange edge is what marks them instead. */}
+          {f.topic && <span className="imm-know-topic">{f.topic}:</span>}{' '}
           {f.text}
         </motion.li>
       ))}

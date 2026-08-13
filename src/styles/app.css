@@ -2198,6 +2198,12 @@ input {
   white-space: normal;
 }
 
+/* Dimmed, so the answer still reads first — the topic is there to be glanced
+   past once you already know which question the line belongs to. */
+.imm-know-topic {
+  color: #a2917f;
+}
+
 /* Notes are the things she caught that no question asked for, so they carry a
    mark rather than just a tint — a tint alone reads as an accident. */
 .imm-know-chip.is-note {

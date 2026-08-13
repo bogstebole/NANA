@@ -73,18 +73,24 @@ export function knownFacts(answers, notes = []) {
     const sr = Q[id] || {};
     const label = (oid) => sr.options?.[oid] || q.options?.find((o) => o.id === oid)?.short;
 
+    // The option's wording alone is not a fact: "više puta dnevno" says nothing
+    // without the question it answers, and "nijednom" says less than nothing.
+    // `short` is what the review screens already use to name a question in a
+    // few words, so it is what names it here too.
+    const topic = sr.short || q.shortTitle;
+
     if (q.type === 'inputs') {
       const filled = Object.values(answer.values || {})
         .map((v) => v?.trim())
         .filter(Boolean);
-      if (filled.length) facts.push({ id, text: filled.join(', ') });
+      if (filled.length) facts.push({ id, topic, text: filled.join(', ') });
     } else if (q.type === 'single') {
       const text = label(answer.optionId);
-      if (text) facts.push({ id, text });
+      if (text) facts.push({ id, topic, text });
     } else {
       const texts = (answer.optionIds || []).map(label).filter(Boolean);
       if (answer.other?.trim()) texts.push(answer.other.trim());
-      if (texts.length) facts.push({ id, text: texts.join(', ') });
+      if (texts.length) facts.push({ id, topic, text: texts.join(', ') });
     }
   }
 
