@@ -4,14 +4,34 @@ import { Mail, User } from 'lucide-react';
 import Logo from '../components/Logo';
 import PhotoCarousel from '../components/PhotoCarousel';
 import TextField from '../components/TextField';
+import SelectCard from '../components/SelectCard';
 import Button from '../components/Button';
+
+// The two sides of the product are two different applications that happen to
+// share a database, so which one you get is settled here rather than by a
+// toggle inside one of them.
+const ROLES = [
+  {
+    id: 'family',
+    letter: 'a',
+    title: 'I need care for a parent',
+    description: 'Answer some questions and we find someone near you',
+  },
+  {
+    id: 'caregiver',
+    letter: 'b',
+    title: 'I am a caregiver',
+    description: 'Take requests from families, agree terms, get paid',
+  },
+];
 
 export default function Register({ onContinue }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [role, setRole] = useState('family');
   const valid = name.trim() && /\S+@\S+\.\S+/.test(email);
 
-  const submit = () => valid && onContinue({ name: name.trim(), email: email.trim() });
+  const submit = () => valid && onContinue({ name: name.trim(), email: email.trim(), role });
 
   return (
     <motion.div
@@ -27,6 +47,20 @@ export default function Register({ onContinue }) {
         <p>To continue fill in required fields</p>
       </div>
       <div className="form-card">
+        <div className="role-choice">
+          <p className="tf-label">I am here as</p>
+          {ROLES.map((r) => (
+            <SelectCard
+              key={r.id}
+              letter={r.letter}
+              title={r.title}
+              description={r.description}
+              selected={role === r.id}
+              onClick={() => setRole(r.id)}
+            />
+          ))}
+        </div>
+
         <TextField
           label="Name and lastname"
           icon={User}

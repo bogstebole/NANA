@@ -15,6 +15,7 @@ import PaywallModal from './components/PaywallModal';
 import PlanDetail from './screens/PlanDetail';
 import Immersive from './screens/Immersive';
 import ImmersiveConversation from './screens/ImmersiveConversation';
+import CaregiverApp from './screens/caregiver/CaregiverApp';
 import ApiKeyPanel from './components/ApiKeyPanel';
 import { loadKey, saveKey } from './lib/claudeChat';
 import { reconcile } from './data/dependencies';
@@ -28,7 +29,10 @@ const formatToday = () =>
 export default function App() {
   const [phase, setPhase] = useState('register'); // register | app
   const [view, setView] = useState('chat');
-  const [user, setUser] = useState({ name: '', email: '' });
+  // `role` is chosen at registration and decides which of the two applications
+  // this is: the family's, or the caregiver's. Switching means starting over,
+  // which is what the restart button is for.
+  const [user, setUser] = useState({ name: '', email: '', role: 'family' });
   // answers live here so the profile can read them without a second source of truth
   const [answers, setAnswers] = useState({});
   const [plan, setPlan] = useState(null);
@@ -154,6 +158,18 @@ export default function App() {
 
   // Requests only exist once the user has actually contacted someone.
   const hasBookings = unlocked;
+
+  // The caregiver's side shares the shell and the components and nothing else:
+  // no questionnaire, no care plan, no sidebar built for a family.
+  const isCaregiver = user.role === 'caregiver';
+
+  if (phase === 'app' && isCaregiver) {
+    return (
+      <div className="app">
+        <CaregiverApp user={user} onRestart={restart} />
+      </div>
+    );
+  }
 
   return (
     <div className="app">
