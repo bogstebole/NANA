@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CalendarClock, Check } from 'lucide-react';
+import { Check, Send } from 'lucide-react';
 import Button from '../Button';
 import { hoursIn, money, serviceTitle, totalsFor } from '../../data/caregiverBoard';
 
@@ -27,8 +27,9 @@ export default function VisitPlanForm({ client, plan, onSave, onCancel }) {
   return (
     <>
       <p className="ag-lead">
-        What you are going to {client.elder.split(' ')[0]} for. The work order afterwards opens
-        against this, so anything you change here is what you will be comparing the visit to.
+        What you are going to {client.elder.split(' ')[0]} for. Sending it to {client.family} holds
+        the money for the visit before you go, and the work order afterwards opens against it — so
+        anything you change here is what the visit will be measured against.
       </p>
 
       <div className="wo-row">
@@ -55,9 +56,11 @@ export default function VisitPlanForm({ client, plan, onSave, onCancel }) {
       </div>
       <p className="ag-hint">
         {hours
-          ? `${hours} h at the agreed ${money(client.rate)}/h — ${money(
+          ? `${hours} h at the agreed ${money(client.rate)}/h. ${money(
+              totalsFor(hours, client.rate).charged
+            )} is held from ${client.family}'s card, ${money(
               totalsFor(hours, client.rate).net
-            )} to you if it runs to plan. The pattern in the agreement is ${client.schedule}.`
+            )} of it yours if the visit runs to plan. The pattern in the agreement is ${client.schedule}.`
           : `Times as a range, like 09:00–13:00. The pattern in the agreement is ${client.schedule}.`}
       </p>
 
@@ -99,8 +102,8 @@ export default function VisitPlanForm({ client, plan, onSave, onCancel }) {
             onSave(client.id, { date: date.trim(), time: time.trim(), hours, services, notes: notes.trim() })
           }
         >
-          <CalendarClock size={14} strokeWidth={1.75} />
-          {plan ? 'Save the plan' : 'Plan the visit'}
+          <Send size={14} strokeWidth={1.75} />
+          {plan ? 'Send the change' : 'Send to client'}
         </Button>
       </div>
     </>

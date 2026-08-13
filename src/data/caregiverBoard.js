@@ -175,6 +175,7 @@ export const clients = [
       hours: 4,
       services: ['medication', 'meals', 'company'],
       notes: 'Pick up the prescription from the pharmacy on Njegoševa. Milena asked to be called after.',
+      sentOn: '2 days ago',
     },
     visits: [
       { date: '8 August', time: '09:00–13:00', hours: 4, mood: 'good', eating: 'usual', moving: 'usual', services: ['medication', 'meals', 'company'], note: 'Morning routine, cooked for two days, short walk to the park.', status: 'paid' },
@@ -215,9 +216,10 @@ export const clients = [
       hours: 3,
       services: ['personal-care', 'mobility', 'medication'],
       notes: 'Try the courtyard stairs again if he is up to it.',
+      sentOn: 'yesterday',
     },
     visits: [
-      { date: '9 August', time: '10:00–13:00', hours: 3, mood: 'usual', eating: 'usual', moving: 'usual', services: ['personal-care', 'mobility', 'medication'], note: 'Wash, dressing, exercises with the walking frame.', status: 'paid' },
+      { date: '9 August', time: '10:00–13:00', hours: 3, mood: 'usual', eating: 'usual', moving: 'usual', services: ['personal-care', 'mobility', 'medication'], note: 'Wash, dressing, exercises with the walking frame.', status: 'awaiting', sentOn: '6 hours ago', confirmsInHours: 18 },
       { date: '7 August', time: '10:00–13:00', hours: 3, mood: 'good', eating: 'usual', moving: 'more', services: ['personal-care', 'mobility', 'medication'], note: 'Managed the stairs to the courtyard for the first time in weeks.', status: 'paid' },
     ],
     activity: [
@@ -246,7 +248,7 @@ export const clients = [
     services: ['meals', 'housekeeping', 'company'],
     rate: 850,
     since: '4 May',
-    dueInHours: 2,
+    sinceVisit: '18 hours ago',
     visits: [
       { date: 'Yesterday', time: '09:00–12:00', hours: 3, planned: ['meals', 'housekeeping', 'company'], planNotes: 'Ironing, and she wanted help writing a letter.', status: 'due' },
       { date: '7 August', time: '09:00–12:00', hours: 3, mood: 'good', eating: 'usual', moving: 'usual', services: ['meals', 'housekeeping', 'company'], note: 'Cooked together, she did most of it herself.', status: 'paid' },
@@ -278,7 +280,7 @@ export const clients = [
     services: ['company', 'walks', 'errands'],
     rate: 800,
     since: '20 July',
-    dueInHours: 19,
+    sinceVisit: '2 days ago',
     visits: [
       { date: '9 August', time: '08:00–14:00', hours: 6, planned: ['company', 'walks', 'errands'], planNotes: 'Market first, then the walk along the Danube.', status: 'due' },
       { date: '5 August', time: '08:00–14:00', hours: 6, mood: 'good', eating: 'more', moving: 'more', services: ['company', 'walks', 'errands'], note: 'Errands and a long walk. In good spirits all day.', status: 'paid' },
@@ -335,6 +337,17 @@ export function agreementState(client) {
   return 'active';
 }
 
+// Money sits in three places on this board and they are not the same thing:
+// held against a visit that has not happened, sent and inside the family's
+// 24 hours, and actually paid. Telling them apart is most of the point.
+export const heldFor = (client) =>
+  client.plan?.sentOn ? totalsFor(client.plan.hours, client.rate).charged : 0;
+
+export const awaitingFor = (client) =>
+  (client.visits || [])
+    .filter((v) => v.status === 'awaiting')
+    .reduce((sum, v) => sum + totalsFor(v.hours, client.rate).net, 0);
+
 // What each column is worth to her, which is not the same question as how many
 // cards are in it.
 export function boardSummary(list) {
@@ -342,6 +355,9 @@ export function boardSummary(list) {
   const requests = at('request');
   const toSend = at('agreement').filter((c) => !c.agreementSent);
   const workOrders = at('work-order');
+  const awaitingVisits = list.flatMap((c) =>
+    (c.visits || []).filter((v) => v.status === 'awaiting').map((v) => v.confirmsInHours ?? Infinity)
+  );
 
   return {
     requests: requests.length,
@@ -353,8 +369,13 @@ export function boardSummary(list) {
     toSend: toSend.length,
     active: at('active').length,
     workOrders: workOrders.length,
-    // the soonest deadline, because these charge themselves after 24 hours
-    soonestDue: workOrders.reduce((soonest, c) => Math.min(soonest, c.dueInHours ?? Infinity), Infinity),
-    outstanding: workOrders.reduce((sum, c) => sum + workOrderTotals(c).net, 0),
+    // money she has done the work for and not yet asked for
+    unbilled: workOrders.reduce((sum, c) => sum + workOrderTotals(c).net, 0),
+    // sent, and inside the family's window to confirm
+    awaiting: list.reduce((sum, c) => sum + awaitingFor(c), 0),
+    soonestConfirm: awaitingVisits.length ? Math.min(...awaitingVisits) : Infinity,
+    // pre-authorised against visits that have not happened yet
+    held: list.reduce((sum, c) => sum + heldFor(c), 0),
+    plansSent: list.filter((c) => c.plan?.sentOn).length,
   };
 }

@@ -102,8 +102,9 @@ export default function WorkOrderForm({ client, visit, onSend, onCancel }) {
       </div>
       {overtime && (
         <p className="ag-hint">
-          {worked > visit.hours ? 'More' : 'Less'} than the {visit.hours} h planned — the family
-          sees the hours you enter here.
+          {worked > visit.hours
+            ? `More than the ${visit.hours} h held against ${client.family}'s card. The extra is charged when they confirm.`
+            : `Less than the ${visit.hours} h held — the difference is released back to ${client.family}.`}
         </p>
       )}
 
@@ -167,9 +168,14 @@ export default function WorkOrderForm({ client, visit, onSend, onCancel }) {
         </button>
       )}
 
+      <p className="ag-hint">
+        Sending this starts {client.family}'s 24 hours. They confirm it, or it charges itself when
+        the time is up.
+      </p>
+
       <div className="bc-total wo-total">
         <p className="bc-line">
-          <span className="bc-line-label">Charged now · {valid ? worked : 0} h</span>
+          <span className="bc-line-label">Charged · {valid ? worked : 0} h</span>
           <span className="bc-line-value">{money(totals.charged)}</span>
         </p>
         <p className="bc-line">

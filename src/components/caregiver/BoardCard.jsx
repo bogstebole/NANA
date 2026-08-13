@@ -3,7 +3,15 @@ import { motion } from 'framer-motion';
 import { AlertTriangle, CalendarPlus, Check, CheckCheck, Clock, FileText, Send, X } from 'lucide-react';
 import Button from '../Button';
 import Chip from '../Chip';
-import { dueVisit, frailtyLabel, money, serviceShort, workOrderTotals } from '../../data/caregiverBoard';
+import {
+  awaitingFor,
+  dueVisit,
+  frailtyLabel,
+  heldFor,
+  money,
+  serviceShort,
+  workOrderTotals,
+} from '../../data/caregiverBoard';
 
 // One family, on the caregiver's board. The card is the same object in every
 // column — same person, same header — and only the middle and the buttons
@@ -49,12 +57,12 @@ function Status({ client }) {
   if (client.stage === 'active') {
     return <Pill tone="muted">Since {client.since}</Pill>;
   }
-  // A work order charges itself after 24 hours, so the number that matters is
-  // how long she still has to correct it.
-  const urgent = client.dueInHours <= 6;
+  // An unsent work order has no clock of its own. It is money she has done the
+  // work for and not yet asked for — the 24 hours belong to the family, and
+  // only start once it is sent.
   return (
-    <Pill tone={urgent ? 'declined' : 'pending'} icon={urgent ? AlertTriangle : Clock}>
-      {client.dueInHours} h left
+    <Pill tone="pending" icon={AlertTriangle}>
+      Not sent
     </Pill>
   );
 }
@@ -174,8 +182,16 @@ const BoardCard = forwardRef(function BoardCard(
               client.plan ? `${client.plan.date} · ${client.plan.time}` : 'Nothing planned yet'
             }
           />
-          <Line label="Rate" value={`${money(client.rate)}/h`} />
-          <Line label="Agreed" value={`${client.hours} h/week`} />
+          {client.plan ? (
+            <Line label="Held" value={`${money(heldFor(client))} · sent ${client.plan.sentOn}`} />
+          ) : (
+            <Line label="Rate" value={`${money(client.rate)}/h`} />
+          )}
+          {awaitingFor(client) > 0 ? (
+            <Line label="Awaiting" value={`${money(awaitingFor(client))} · family confirming`} />
+          ) : (
+            <Line label="Agreed" value={`${client.hours} h/week`} />
+          )}
         </div>
       )}
 
@@ -184,6 +200,7 @@ const BoardCard = forwardRef(function BoardCard(
           <div className="bc-lines">
             <Line label="Visit" value={`${due.date} · ${due.time}`} />
             <Line label="Worked" value={`${due.hours} h at ${money(client.rate)}/h`} />
+            <Line label="Finished" value={client.sinceVisit} />
           </div>
           <div className="bc-total">
             <Line label="Charged" value={money(totals.charged)} />

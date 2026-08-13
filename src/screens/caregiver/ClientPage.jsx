@@ -28,7 +28,9 @@ import VisitPlanForm from '../../components/caregiver/VisitPlanForm';
 import WorkOrderForm from '../../components/caregiver/WorkOrderForm';
 import {
   agreementState,
+  awaitingFor,
   dueVisit,
+  heldFor,
   frailtyLabel,
   money,
   serviceShort,
@@ -114,6 +116,7 @@ function Visits({ client }) {
   // The visit still waiting on its work order is not in here — it is the form
   // above, and listing it twice would say a visit is both done and outstanding.
   const visits = (client.visits || []).filter((v) => v.status !== 'due');
+  const settled = visits.filter((v) => v.status === 'paid');
   if (!visits.length) {
     return (
       <p className="board-empty">
@@ -122,13 +125,15 @@ function Visits({ client }) {
     );
   }
 
-  const hours = visits.reduce((n, v) => n + v.hours, 0);
-  const earned = visits.reduce((n, v) => n + totalsFor(v.hours, client.rate).net, 0);
+  const hours = settled.reduce((n, v) => n + v.hours, 0);
+  const earned = settled.reduce((n, v) => n + totalsFor(v.hours, client.rate).net, 0);
+  const pending = awaitingFor(client);
 
   return (
     <>
       <p className="ag-hint">
-        {visits.length} visits · {hours} h · {money(earned)} to you
+        {settled.length} paid · {hours} h · {money(earned)} to you
+        {pending > 0 && ` · ${money(pending)} awaiting confirmation`}
       </p>
       <ul className="visit-list">
         {visits.map((v, i) => {
@@ -140,7 +145,14 @@ function Visits({ client }) {
                 <p className="visit-when">
                   {v.date} · {v.time}
                 </p>
-                <span className="status-pill is-accepted">Paid</span>
+                {v.status === 'awaiting' ? (
+                  <span className="status-pill is-pending">
+                    <Clock size={12} strokeWidth={2} />
+                    Confirms in {v.confirmsInHours} h
+                  </span>
+                ) : (
+                  <span className="status-pill is-accepted">Paid</span>
+                )}
               </div>
               <p className="visit-note">{v.note}</p>
               {v.services?.length > 0 && (
@@ -294,19 +306,20 @@ export default function ClientPage({
         <Section
           title="Work order outstanding"
           badge={
-            <span className={`status-pill is-${client.dueInHours <= 6 ? 'declined' : 'pending'}`}>
-              <Clock size={12} strokeWidth={2} />
-              {client.dueInHours} h left
+            <span className="status-pill is-pending">
+              <AlertTriangle size={12} strokeWidth={2} />
+              Not sent
             </span>
           }
         >
           <p className="ag-lead">
-            {due.date} · {due.time} — {due.hours} h at the agreed {money(client.rate)}/h. It charges
-            itself after 24 hours, so send it with the hours and the report that actually happened.
+            {due.date} · {due.time} — {due.hours} h at the agreed {money(client.rate)}/h, finished{' '}
+            {client.sinceVisit}. Sending it starts {client.family}'s 24 hours: they confirm, or it
+            charges itself when the time is up.
           </p>
           <div className="bc-lines ag-terms">
             <p className="bc-line">
-              <span className="bc-line-label">If sent as planned</span>
+              <span className="bc-line-label">If sent as worked</span>
               <span className="bc-line-value">
                 {money(totalsFor(due.hours, client.rate).net)} to you
               </span>
@@ -328,9 +341,9 @@ export default function ClientPage({
           title="Next visit"
           badge={
             client.plan ? (
-              <span className="status-pill is-muted">
-                <Clock size={12} strokeWidth={2} />
-                {client.plan.hours} h
+              <span className="status-pill is-accepted">
+                <Check size={12} strokeWidth={2} />
+                {money(heldFor(client))} held
               </span>
             ) : null
           }
@@ -339,8 +352,10 @@ export default function ClientPage({
             <>
               <p className="ag-lead">
                 {client.plan.date} · {client.plan.time} — {client.plan.hours} h at{' '}
-                {money(client.rate)}/h, {money(totalsFor(client.plan.hours, client.rate).net)} to
-                you if it runs to plan.
+                {money(client.rate)}/h. Sent to {client.family} {client.plan.sentOn};{' '}
+                {money(heldFor(client))} is held against their card, and{' '}
+                {money(totalsFor(client.plan.hours, client.rate).net)} of it reaches you if the
+                visit runs to plan.
               </p>
               <p className="ag-label">Planned</p>
               <div className="ag-services">
@@ -365,8 +380,9 @@ export default function ClientPage({
           ) : (
             <>
               <p className="ag-lead">
-                Nothing planned yet. The visit order says what you are going for — the work order
-                afterwards is filled in against it.
+                Nothing planned yet. The visit order says what you are going for, and sending it to{' '}
+                {client.family} holds the money for it before you go — so the work order afterwards
+                is only confirming what was already covered.
               </p>
               <div className="panel-card-actions is-end">
                 <Button variant="primary" onClick={() => setModal('plan')}>

@@ -98,20 +98,22 @@ export default function CaregiverBoard({ user, clients, paid, actions }) {
           note={s.toSend ? 'Blocks every visit' : 'All sent'}
           tone={s.toSend ? 'warn' : null}
         />
+        {/* Not sent is money she has done the work for and not asked for; it is
+            the only one of the three she can do anything about. */}
         <Stat
           value={s.workOrders}
-          label="Work orders due"
-          note={
-            s.workOrders
-              ? `${money(s.outstanding)} · soonest in ${s.soonestDue} h`
-              : 'Everything settled'
-          }
-          tone={s.soonestDue <= 6 ? 'urgent' : null}
+          label="Work orders not sent"
+          note={s.workOrders ? `${money(s.unbilled)} unbilled` : 'Everything sent'}
+          tone={s.workOrders ? 'urgent' : null}
         />
         <Stat
           value={money(paid)}
           label="Paid to you in August"
-          note={`${s.active} arrangements running`}
+          note={
+            s.awaiting > 0
+              ? `${money(s.awaiting)} awaiting confirmation`
+              : `${s.active} arrangements running`
+          }
         />
       </div>
 

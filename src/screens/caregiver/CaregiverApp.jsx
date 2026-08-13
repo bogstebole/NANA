@@ -21,7 +21,7 @@ import {
 
 export default function CaregiverApp({ user, onRestart }) {
   const [clients, setClients] = useState(seedClients);
-  const [paid, setPaid] = useState(paidThisMonth);
+  const [paid] = useState(paidThisMonth);
   const [openId, setOpenId] = useState(null);
 
   const patch = (id, fn) =>
@@ -57,7 +57,7 @@ export default function CaregiverApp({ user, onRestart }) {
     onVisitDone: (id) =>
       patch(id, (c) => ({
         stage: 'work-order',
-        dueInHours: 24,
+        sinceVisit: 'just now',
         plan: null,
         visits: [
           {
@@ -81,16 +81,17 @@ export default function CaregiverApp({ user, onRestart }) {
   // The visit order, written before going. Editing an existing plan and making
   // the first one are the same thing from here.
   const planVisit = (id, plan) =>
-    patch(id, (c) => ({
-      plan,
-      activity: logged(
-        c,
-        c.plan ? 'note' : 'visit-planned',
-        c.plan
-          ? `You changed the plan for ${plan.date} · ${plan.time}.`
-          : `You planned a visit for ${plan.date} · ${plan.time}, ${plan.hours} h.`
-      ),
-    }));
+    patch(id, (c) => {
+      const hold = totalsFor(plan.hours, c.rate).charged;
+      return {
+        plan: { ...plan, sentOn: 'just now' },
+        activity: logged(
+          c,
+          'visit-planned',
+          `Visit order sent for ${plan.date} · ${plan.time}, ${plan.hours} h. ${money(hold)} held from ${c.family}'s card.`
+        ),
+      };
+    });
 
   // Sending it settles the visit and pays for it. The report is written onto
   // the visit rather than kept beside it, because the hours that were charged
@@ -99,17 +100,25 @@ export default function CaregiverApp({ user, onRestart }) {
     const client = clients.find((c) => c.id === id);
     if (!client) return;
     const net = totalsFor(report.hours, client.rate).net;
-    setPaid((p) => p + net);
     patch(id, (c) => ({
       stage: 'active',
-      dueInHours: null,
+      sinceVisit: null,
       visits: (c.visits || []).map((v) =>
-        v.status === 'due' ? { ...v, ...report, note: report.note || 'No notes.', status: 'paid' } : v
+        v.status === 'due'
+          ? {
+              ...v,
+              ...report,
+              note: report.note || 'No notes.',
+              status: 'awaiting',
+              sentOn: 'just now',
+              confirmsInHours: 24,
+            }
+          : v
       ),
       activity: logged(
         c,
         'work-order',
-        `Work order sent for the ${report.hours} h visit — ${report.services.map(serviceShort).join(', ').toLowerCase() || 'nothing ticked'}. ${money(net)} to you.` +
+        `Work order sent for the ${report.hours} h visit — ${report.services.map(serviceShort).join(', ').toLowerCase() || 'nothing ticked'}. ${money(net)} to you once ${c.family} confirms, or automatically in 24 hours.` +
           (report.concern ? ` You flagged: ${report.concern}` : '')
       ),
     }));
