@@ -3602,3 +3602,280 @@ input {
   display: inline-block;
   will-change: filter;
 }
+
+/* ---------- Register: which side of the product you are on ---------- */
+
+.role-choice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+/* ---------- Caregiver: top bar ---------- */
+
+/* No sidebar over here — a board wants the width, and a nav holding one
+   working item reads as broken rather than as small. */
+.cg-topbar {
+  gap: var(--spacing-3);
+  padding-left: var(--spacing-4);
+}
+
+.cg-topbar-role {
+  flex: 1;
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-disabled);
+}
+
+.cg-topbar-user {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+/* ---------- Caregiver: the board ---------- */
+
+/* Four columns need more than the 720px the reading views are capped at. */
+.view.is-board {
+  overflow: hidden;
+  padding-bottom: var(--spacing-4);
+}
+
+.view.is-board > * {
+  max-width: none;
+}
+
+.stat-row.is-four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.stat-note {
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-disabled);
+}
+
+/* Two levels of "this one is on you": something has been waiting, and
+   something is about to settle itself without her. */
+.stat.is-warn .stat-value {
+  color: var(--status-wait-fg);
+}
+
+.stat.is-urgent .stat-value,
+.stat.is-urgent .stat-note {
+  color: var(--status-no-fg);
+}
+
+.board {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  gap: var(--spacing-3);
+  overflow-x: auto;
+  padding-bottom: var(--spacing-2);
+}
+
+/* The floor is set by the card header: a Serbian surname, an age and a status
+   pill on one line. Below it the name wraps and the pill ends up beside a
+   two-line block, so narrower screens scroll the board sideways instead —
+   which is what a board is supposed to do. */
+.board-col {
+  flex: 1 1 0;
+  min-width: 320px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: var(--spacing-3);
+  background: var(--surface-2);
+  border-radius: var(--radius-3xl);
+}
+
+.board-col-head {
+  flex-shrink: 0;
+  padding: 0 var(--spacing-1) var(--spacing-3);
+}
+
+.board-col-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-leading);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+}
+
+.board-col-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--surface-elevated-4);
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-secondary);
+}
+
+.board-col-note {
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-disabled);
+}
+
+.board-col-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  padding: var(--spacing-0-5);
+  scrollbar-width: thin;
+}
+
+.board-col-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.board-col-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.board-col-body::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.board-empty {
+  padding: var(--spacing-4) var(--spacing-3);
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-2xl);
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+  color: var(--text-disabled);
+  text-align: center;
+}
+
+/* ---------- Caregiver: a family on the board ---------- */
+
+.bc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3);
+  background: var(--surface-elevated);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-card);
+}
+
+/* Top-aligned, not centred: a long name wraps on a narrow board, and centring
+   left the avatar and the status pill floating halfway down the block. */
+.bc-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-2);
+}
+
+.bc-id {
+  flex: 1;
+  min-width: 0;
+}
+
+.bc-name {
+  font-size: var(--text-sm-size);
+  line-height: var(--text-sm-leading);
+  font-weight: var(--font-medium);
+  color: var(--text-primary);
+}
+
+
+.bc-meta {
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--text-disabled);
+}
+
+/* The one line that says how heavy the work is. */
+.bc-frailty {
+  font-size: var(--text-xs-size);
+  line-height: var(--text-xs-leading);
+  color: var(--primary-subtle-foreground);
+}
+
+.bc-note {
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+  color: var(--text-secondary);
+}
+
+.bc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-1-5);
+}
+
+.bc-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bc-line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-2);
+  font-size: var(--text-xs-size);
+  line-height: 18px;
+}
+
+.bc-line-label {
+  flex-shrink: 0;
+  color: var(--text-disabled);
+}
+
+.bc-line-value {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  color: var(--text-primary);
+}
+
+/* The money block: charged, what the platform takes, what lands. */
+.bc-total {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--spacing-2) var(--spacing-2-5);
+  background: var(--surface-2);
+  border-radius: var(--radius-lg);
+}
+
+.bc-line.is-net {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-1);
+  padding-top: var(--spacing-1);
+  border-top: 1px solid var(--border-subtle);
+  font-weight: var(--font-medium);
+}
+
+.bc-line.is-net .bc-line-label {
+  color: var(--text-primary);
+}
+
+.bc-actions {
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+.bc-actions .btn {
+  flex: 1;
+}
